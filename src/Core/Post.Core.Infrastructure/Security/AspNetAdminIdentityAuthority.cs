@@ -120,43 +120,47 @@ public sealed class AspNetAdminIdentityAuthority : IAdminIdentityAuthority
         ArgumentNullException.ThrowIfNull(outboxMessage);
         await EnsureRolesAsync(cancellationToken).ConfigureAwait(false);
 
-        await using var transaction = await _dbContext.Database.BeginTransactionAsync(
-            IsolationLevel.Serializable,
-            cancellationToken).ConfigureAwait(false);
         try
         {
-            _dbContext.IdentityBootstrapLocks.Add(new IdentityBootstrapLock
+            var strategy = _dbContext.Database.CreateExecutionStrategy();
+            await strategy.ExecuteAsync(async () =>
             {
-                Id = IdentityBootstrapLock.SingletonId,
-                UserId = identity.UserId,
-                CompletedAt = auditRecord.OccurredAt
-            });
-            await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-            var user = new AppUser
-            {
-                Id = identity.UserId,
-                UserName = identity.UserName,
-                IsActive = true
-            };
-            var createResult = await _userManager.CreateAsync(user, identity.Password).ConfigureAwait(false);
-            ThrowIfIdentityFailed("Initial administrator creation failed", createResult);
-
-            var roleResult = await _userManager.AddToRolesAsync(
-                user,
-                identity.Roles.Select(x => x.ToString())).ConfigureAwait(false);
-            ThrowIfIdentityFailed("Initial administrator role assignment failed", roleResult);
-
-            _dbContext.UserAllowedCenters.AddRange(identity.AllowedCenterCodes.Select(center =>
-                new UserAllowedCenter
+                await using var transaction = await _dbContext.Database.BeginTransactionAsync(
+                    IsolationLevel.Serializable,
+                    cancellationToken).ConfigureAwait(false);
+                _dbContext.IdentityBootstrapLocks.Add(new IdentityBootstrapLock
                 {
-                    UserId = user.Id,
-                    ExchangeCenterCode = center
-                }));
-            _dbContext.AuditRecords.Add(auditRecord);
-            _dbContext.OutboxMessages.Add(outboxMessage);
-            await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+                    Id = IdentityBootstrapLock.SingletonId,
+                    UserId = identity.UserId,
+                    CompletedAt = auditRecord.OccurredAt
+                });
+                await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+                var user = new AppUser
+                {
+                    Id = identity.UserId,
+                    UserName = identity.UserName,
+                    IsActive = true
+                };
+                var createResult = await _userManager.CreateAsync(user, identity.Password).ConfigureAwait(false);
+                ThrowIfIdentityFailed("Initial administrator creation failed", createResult);
+
+                var roleResult = await _userManager.AddToRolesAsync(
+                    user,
+                    identity.Roles.Select(x => x.ToString())).ConfigureAwait(false);
+                ThrowIfIdentityFailed("Initial administrator role assignment failed", roleResult);
+
+                _dbContext.UserAllowedCenters.AddRange(identity.AllowedCenterCodes.Select(center =>
+                    new UserAllowedCenter
+                    {
+                        UserId = user.Id,
+                        ExchangeCenterCode = center
+                    }));
+                _dbContext.AuditRecords.Add(auditRecord);
+                _dbContext.OutboxMessages.Add(outboxMessage);
+                await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+            }).ConfigureAwait(false);
         }
         catch (DbUpdateException exception) when (RelationalConstraintClassifier.IsUniqueViolation(exception))
         {

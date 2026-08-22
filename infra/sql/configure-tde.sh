@@ -13,7 +13,7 @@ tde_password="$(escape_sql "${POST_SQL_TDE_CERT_PASSWORD}")"
 attempts=0
 while (( attempts < 120 )); do
   count="$(${sqlcmd} -C -S sql-primary -U sa -h -1 -W -Q \
-    "SET NOCOUNT ON; SELECT COUNT(*) FROM sys.databases WHERE name IN ('PostParcelLifecycle','PostDeviceConfig','PostEdgeHealth','PostOperationalResult','PostIdentity')" \
+    "SET NOCOUNT ON; SELECT COUNT(*) FROM sys.databases WHERE name IN ('PostParcelLifecycle','PostDeviceConfig','PostEdgeHealth','PostOperationalResult','PostIdentity') AND state_desc = 'ONLINE' AND HAS_DBACCESS(name) = 1" \
     | tr -d '[:space:]')"
   if [[ "${count}" == "5" ]]; then break; fi
   attempts=$((attempts + 1))
@@ -41,7 +41,9 @@ SQL
 ${sqlcmd} -C -S sql-primary -U sa -b -i /tmp/configure-tde.sql
 
 for database in "${databases[@]}"; do
-  cat >/tmp/enable-tde.sql <<SQL
+  attempts=0
+  while (( attempts < 120 )); do
+    cat >/tmp/enable-tde.sql <<SQL
 USE [${database}];
 IF NOT EXISTS (SELECT 1 FROM sys.dm_database_encryption_keys WHERE database_id = DB_ID())
   CREATE DATABASE ENCRYPTION KEY WITH ALGORITHM = AES_256
@@ -49,7 +51,16 @@ IF NOT EXISTS (SELECT 1 FROM sys.dm_database_encryption_keys WHERE database_id =
 IF (SELECT is_encrypted FROM sys.databases WHERE name = N'${database}') = 0
   ALTER DATABASE [${database}] SET ENCRYPTION ON;
 SQL
-  ${sqlcmd} -C -S sql-primary -U sa -b -i /tmp/enable-tde.sql
+    if ${sqlcmd} -C -S sql-primary -U sa -b -i /tmp/enable-tde.sql; then
+      break
+    fi
+    attempts=$((attempts + 1))
+    sleep 5
+  done
+  if (( attempts == 120 )); then
+    echo "Database ${database} did not become ready for SQL TDE before timeout." >&2
+    exit 1
+  fi
 done
 
 attempts=0

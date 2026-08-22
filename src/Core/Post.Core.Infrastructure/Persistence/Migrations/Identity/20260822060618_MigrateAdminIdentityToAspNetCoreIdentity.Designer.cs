@@ -383,10 +383,8 @@ namespace Post.Core.Infrastructure.Persistence.Migrations.Identity
             modelBuilder.Entity("Post.Core.Infrastructure.Persistence.IdentityBootstrapLock", b =>
                 {
                     b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
+                        .ValueGeneratedNever()
                         .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<DateTimeOffset>("CompletedAt")
                         .HasColumnType("datetimeoffset");

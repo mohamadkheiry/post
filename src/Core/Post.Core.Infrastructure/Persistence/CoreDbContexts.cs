@@ -412,6 +412,7 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
         bootstrapLock.ToTable("IdentityBootstrapLocks", table =>
             table.HasCheckConstraint("CK_IdentityBootstrapLocks_Singleton", "[Id] = 1"));
         bootstrapLock.HasKey(x => x.Id);
+        bootstrapLock.Property(x => x.Id).ValueGeneratedNever();
         bootstrapLock.HasIndex(x => x.UserId).IsUnique();
 
         var credential = builder.Entity<EdgeCredential>();

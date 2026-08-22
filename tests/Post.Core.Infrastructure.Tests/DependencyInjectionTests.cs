@@ -75,8 +75,7 @@ public sealed class DependencyInjectionTests
         Assert.Contains("AspNetUsers", identityScript, StringComparison.Ordinal);
         Assert.Contains("AspNetRoles", identityScript, StringComparison.Ordinal);
         Assert.Contains("IdentityBootstrapLocks", identityScript, StringComparison.Ordinal);
-        Assert.Contains("SET IDENTITY_INSERT [IdentityBootstrapLocks] ON", identityScript, StringComparison.Ordinal);
-        Assert.Contains("SET IDENTITY_INSERT [IdentityBootstrapLocks] OFF", identityScript, StringComparison.Ordinal);
+        Assert.DoesNotContain("SET IDENTITY_INSERT [IdentityBootstrapLocks]", identityScript, StringComparison.Ordinal);
         Assert.Contains("INSERT INTO [AspNetUsers]", identityScript, StringComparison.Ordinal);
         Assert.Contains("INSERT INTO [AspNetUserRoles]", identityScript, StringComparison.Ordinal);
         Assert.True(

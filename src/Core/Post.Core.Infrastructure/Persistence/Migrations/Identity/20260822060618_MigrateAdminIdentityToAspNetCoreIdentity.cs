@@ -59,8 +59,7 @@ namespace Post.Core.Infrastructure.Persistence.Migrations.Identity
                 name: "IdentityBootstrapLocks",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Id = table.Column<int>(type: "int", nullable: false),
                     UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     CompletedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false)
                 },
@@ -237,12 +236,10 @@ namespace Post.Core.Infrastructure.Persistence.Migrations.Identity
                        0, 0, NULL, 1, 0
                 FROM [AppUsers];
 
-                SET IDENTITY_INSERT [IdentityBootstrapLocks] ON;
                 INSERT INTO [IdentityBootstrapLocks] ([Id], [UserId], [CompletedAt])
                 SELECT TOP (1) 1, [Id], SYSUTCDATETIME()
                 FROM [AppUsers]
                 ORDER BY [Id];
-                SET IDENTITY_INSERT [IdentityBootstrapLocks] OFF;
 
                 INSERT INTO [AspNetUserRoles] ([UserId], [RoleId])
                 SELECT [UserId], CASE [Role]

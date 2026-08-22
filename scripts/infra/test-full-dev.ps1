@@ -560,7 +560,7 @@ try {
             '-c', 'Release',
             '--',
             '--url', "$edgeBase/ws/device",
-            '--device', 'FULLDEV-SORTER-01',
+            '--device', $sortingDeviceId,
             '--scenario', 'full',
             '--timeout-seconds', '180')
         & $dotnet @simulatorArguments
@@ -614,7 +614,7 @@ try {
             '--no-restore',
             '--',
             '--url', "$edgeBase/ws/device",
-            '--device', 'FULLDEV-SORTER-01',
+            '--device', $sortingDeviceId,
             '--scenario', 'load',
             '--count', '200',
             '--timeout-seconds', '300')

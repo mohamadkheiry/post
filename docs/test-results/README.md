@@ -6,19 +6,23 @@
 
 | field | value |
 | --- | --- |
-| Commit | `TBD_AFTER_FINAL_RUN` |
-| Generated UTC | `TBD_AFTER_FINAL_RUN` |
-| .NET SDK | `TBD_AFTER_FINAL_RUN` |
+| Evidence | [`20260822-ed77486`](20260822-ed77486) |
+| Commit | `ed77486` |
+| Generated UTC | `2026-08-22T10:39:12.4271682Z` |
+| .NET SDK | `10.0.400` |
 | Configuration | `Release` |
-| Passed | `TBD_AFTER_FINAL_RUN` |
-| Failed | `TBD_AFTER_FINAL_RUN` |
-| Skipped | `TBD_AFTER_FINAL_RUN` |
-| Total | `TBD_AFTER_FINAL_RUN` |
-| Line coverage | `TBD_AFTER_FINAL_RUN` |
-| Branch coverage | `TBD_AFTER_FINAL_RUN` |
-| Method coverage | `TBD_AFTER_FINAL_RUN` |
+| Passed | `601` |
+| Failed | `0` |
+| Skipped | `0` |
+| Total | `601` |
+| Handwritten methods | `1244/1244` |
+| Entirely uncovered handwritten methods | `0` |
+| Line coverage | `91.51%` |
+| Branch coverage | `76.89%` |
+| Method coverage | `99.8%` |
 
-Placeholderها عمداً تا اجرای نهایی کل solution حفظ شده‌اند؛ آمار یک زیرمجموعه یا commit متفاوت نباید به‌عنوان نتیجه‌ی کل پروژه ثبت شود.
+این نتیجه متعلق به اجرای کامل solution و full-development E2E روی commit بالا است؛
+آمار زیرمجموعه یا commit متفاوت جایگزین آن نیست.
 
 ## تولید گزارش
 

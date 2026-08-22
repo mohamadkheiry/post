@@ -1,0 +1,195 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-08-22T10:33:27.0760319+00:00",
+  "sourceRevision": "ed7748657d0e535011648af783d48445c477de24",
+  "workingTreeClean": true,
+  "composeProject": "post-platform-final",
+  "result": "PASS",
+  "command": {
+    "script": "scripts/infra/test-full-dev.ps1",
+    "resetData": true,
+    "includeObservability": true,
+    "includeHighAvailability": true,
+    "buildImages": true,
+    "requireCleanRevision": true
+  },
+  "requestedProfiles": {
+    "connectedEdge": true,
+    "observability": true,
+    "highAvailability": true
+  },
+  "executedProfiles": {
+    "connectedEdge": true,
+    "observability": true,
+    "highAvailability": true
+  },
+  "performance": {
+    "classification": "capacity-smoke-baseline-not-an-slo",
+    "count": 200,
+    "errors": 0,
+    "elapsedMs": 46272.0,
+    "throughputPerSecond": 4.32,
+    "latencyP50Ms": 170.92,
+    "latencyP95Ms": 530.92,
+    "latencyMaxMs": 2237.48,
+    "sqlReadingCountBefore": 1,
+    "sqlReadingCountAfter": 201
+  },
+  "sql": {
+    "authoritativeDatabaseCount": 5,
+    "tdeEncryptedDatabaseCount": 5
+  },
+  "assertions": [
+    "auth-on-admin-edge-bootstrap",
+    "unprovisioned-edge-not-ready",
+    "edge-sqlite-encrypted-db-wal-shm-restart-persistence",
+    "edge-gateway-core-sync-async",
+    "capacity-baseline-two-parcels-per-second",
+    "redis-sql-authoritative-stale-outage-two-replicas",
+    "operational-result-sql-authoritative-redis-conflict-outage-rebuild",
+    "s3-sse-signed-header-negative-positive-metadata-sql",
+    "kafka-publish-consume-restart-idempotency-redelivery-dlq",
+    "sql-tde-five-databases",
+    "generated-secrets-absent-from-images",
+    "prometheus-loki-grafana-exporter-outage-nonfatal",
+    "sql-always-on-sync-failover-query-failback"
+  ],
+  "resourceSnapshot": [
+    {
+      "service": "post-platform-final-alloy-1",
+      "cpu": "15.09%",
+      "memory": "71.7MiB / 256MiB",
+      "networkIo": "51.1kB / 3.71MB",
+      "blockIo": "18.2MB / 1.22MB",
+      "pids": "11"
+    },
+    {
+      "service": "post-platform-final-data-ingestion-1",
+      "cpu": "26.09%",
+      "memory": "48.45MiB / 320MiB",
+      "networkIo": "16.2kB / 958kB",
+      "blockIo": "4.62MB / 0B",
+      "pids": "18"
+    },
+    {
+      "service": "post-platform-final-device-config-1",
+      "cpu": "2.88%",
+      "memory": "121.9MiB / 384MiB",
+      "networkIo": "185kB / 1.4MB",
+      "blockIo": "18.6MB / 0B",
+      "pids": "25"
+    },
+    {
+      "service": "post-platform-final-edge-1",
+      "cpu": "17.63%",
+      "memory": "97.32MiB / 512MiB",
+      "networkIo": "35.4kB / 741kB",
+      "blockIo": "5.14MB / 69.6kB",
+      "pids": "18"
+    },
+    {
+      "service": "post-platform-final-edge-health-1",
+      "cpu": "5.72%",
+      "memory": "105.6MiB / 384MiB",
+      "networkIo": "225kB / 1.42MB",
+      "blockIo": "4.07MB / 0B",
+      "pids": "25"
+    },
+    {
+      "service": "post-platform-final-gateway-1",
+      "cpu": "7.76%",
+      "memory": "55.02MiB / 320MiB",
+      "networkIo": "96.8kB / 2.03MB",
+      "blockIo": "3.66MB / 0B",
+      "pids": "20"
+    },
+    {
+      "service": "post-platform-final-grafana-1",
+      "cpu": "10.10%",
+      "memory": "94.71MiB / 384MiB",
+      "networkIo": "5.87kB / 126B",
+      "blockIo": "22.2MB / 28.4MB",
+      "pids": "20"
+    },
+    {
+      "service": "post-platform-final-identity-1",
+      "cpu": "2.04%",
+      "memory": "115.5MiB / 384MiB",
+      "networkIo": "115kB / 1.35MB",
+      "blockIo": "4.33MB / 0B",
+      "pids": "23"
+    },
+    {
+      "service": "post-platform-final-loki-1",
+      "cpu": "10.38%",
+      "memory": "142.9MiB / 384MiB",
+      "networkIo": "6.83MB / 78.3kB",
+      "blockIo": "24.1MB / 57.6MB",
+      "pids": "10"
+    },
+    {
+      "service": "post-platform-final-minio-1",
+      "cpu": "0.23%",
+      "memory": "246.1MiB / 512MiB",
+      "networkIo": "23.1kB / 20.5kB",
+      "blockIo": "26.8MB / 324kB",
+      "pids": "9"
+    },
+    {
+      "service": "post-platform-final-object-storage-1",
+      "cpu": "0.41%",
+      "memory": "58.64MiB / 320MiB",
+      "networkIo": "16.5kB / 958kB",
+      "blockIo": "18.2MB / 0B",
+      "pids": "19"
+    },
+    {
+      "service": "post-platform-final-operational-result-1",
+      "cpu": "28.49%",
+      "memory": "118.7MiB / 384MiB",
+      "networkIo": "114kB / 1.12MB",
+      "blockIo": "28.6MB / 0B",
+      "pids": "31"
+    },
+    {
+      "service": "post-platform-final-parcel-lifecycle-1",
+      "cpu": "3.40%",
+      "memory": "116MiB / 448MiB",
+      "networkIo": "383kB / 1.31MB",
+      "blockIo": "14.3MB / 0B",
+      "pids": "34"
+    },
+    {
+      "service": "post-platform-final-prometheus-1",
+      "cpu": "0.35%",
+      "memory": "51.26MiB / 384MiB",
+      "networkIo": "9.79MB / 110kB",
+      "blockIo": "25.3MB / 414kB",
+      "pids": "8"
+    },
+    {
+      "service": "post-platform-final-redis-1",
+      "cpu": "2.29%",
+      "memory": "15.59MiB / 256MiB",
+      "networkIo": "12.4kB / 9.65kB",
+      "blockIo": "13.3MB / 0B",
+      "pids": "6"
+    },
+    {
+      "service": "post-platform-final-redpanda-1",
+      "cpu": "1.93%",
+      "memory": "231.6MiB / 1.25GiB",
+      "networkIo": "278kB / 312kB",
+      "blockIo": "49.3MB / 897kB",
+      "pids": "3"
+    },
+    {
+      "service": "post-platform-final-sql-primary-1",
+      "cpu": "20.55%",
+      "memory": "1.216GiB / 2.25GiB",
+      "networkIo": "10.3MB / 37.3MB",
+      "blockIo": "372MB / 292MB",
+      "pids": "225"
+    }
+  ]
+}

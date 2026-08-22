@@ -1,0 +1,21 @@
+{
+  "generatedAtUtc": "2026-08-22T10:39:12.4271682+00:00",
+  "commit": "ed77486",
+  "configuration": "Release",
+  "dotnetSdk": "10.0.400",
+  "operatingSystem": "Microsoft Windows 10.0.22631",
+  "processArchitecture": "X64",
+  "workingTreeDirty": false,
+  "command": "One dotnet test invocation per tests/*.csproj with XPlat Code Coverage",
+  "minimumLineCoverage": 80.0,
+  "minimumBranchCoverage": 70.0,
+  "minimumMethodCoverage": 85.0,
+  "handwrittenMethods": 1244,
+  "coveredHandwrittenMethods": 1244,
+  "uncoveredHandwrittenMethods": 0,
+  "excludedCompilerGeneratedStaticConstructors": 2,
+  "rawCoverageFiles": 20,
+  "canonicalCoverageFiles": 10,
+  "productionAssemblies": 21,
+  "instrumentedProductionAssemblies": 21
+}

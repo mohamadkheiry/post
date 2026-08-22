@@ -20,7 +20,7 @@
 | REL-004 | durable ingestion، consumerهای parcel/image و inbox/idempotency Core | InboundValidationService؛ Kafka delivery processors؛ Core stores/domain | Core application/infrastructure tests | Implemented |
 | REL-005 | SQLite WAL و migration startup | EdgeDatabaseInitializer؛ migrations | Infrastructure startup/migration tests | Implemented |
 | REL-006 | پنج persistence boundary و migration chain مستقل Core | CoreDbContexts؛ migrations پنج‌گانه؛ profile-aware DI | Core infrastructure/architecture tests + SQL generation | Implemented; staging rollout gate |
-| REL-007 | Redis read-model فعال، TTLدار و قابل بازسازی بدون تضعیف authority SQL | Post.Core.Caching؛ coordinatorهای lifecycle/operational result؛ cleanup worker | hit/miss/stale/conflict/outage/post-commit/two-replica tests + full-development recovery | Implemented; final E2E gate |
+| REL-007 | Redis read-model فعال، TTLدار و قابل بازسازی بدون تضعیف authority SQL | Post.Core.Caching؛ coordinatorهای lifecycle/operational result؛ cleanup worker | hit/miss/stale/conflict/outage/post-commit/two-replica tests + full-development recovery | Implemented; E2E verified |
 | REL-008 | retry/timeout/circuit breaker محدود و جلوگیری از تکرار کور اثر پستی | Edge HTTP/SQL resilience؛ operation journal؛ intent/receipt saga | transient/non-transient/break/recovery/commit-unknown tests | Implemented |
 | CFG-001 | registry، activation و one-time secret rotation دستگاه | DeviceManagementService؛ DeviceConfig API/context | Core domain/application/infrastructure tests + API sample | Implemented |
 | CFG-002 | snapshot config versioned بدون raw token | ConfigurationService؛ ConfigurationSnapshot contracts | hash/serialization/application tests | Implemented |
@@ -31,7 +31,7 @@
 | SEC-004 | security headers و Problem Details | Gateway؛ ApiSupport | API integration tests | Implemented |
 | SEC-005 | provision/rotate/disable credential Edge با Admin/scope، idempotency عملیات secret و نمایش یک‌باره | Identity API؛ EdgeAuthService؛ verifier/receipt/audit/outbox | Identity API/application/infrastructure tests + manual secret-handling review | Implemented |
 | SEC-006 | local-admin مستقل Edge با bootstrap امن، PBKDF2، session محدود، rate limit و audit | Edge LocalAdmin domain/application/store/API | Edge domain/infrastructure/API auth tests + restart/non-disclosure | Implemented |
-| SEC-007 | TLS/WSS و رمزنگاری DB/WAL/SHM/backup Edge با کلید بیرونی و rotation | Edge host/storage؛ SQLite3MC؛ ADR-0009 | startup/rekey/old-key rejection/backup/restore/runtime inspection | Implemented; final E2E gate |
+| SEC-007 | TLS/WSS و رمزنگاری DB/WAL/SHM/backup Edge با کلید بیرونی و rotation | Edge host/storage؛ SQLite3MC؛ ADR-0009 | startup/rekey/old-key rejection/backup/restore/runtime inspection | Implemented; E2E verified |
 | SEC-008 | mutation کیسه/final-status فقط توسط مرکز آخرین reading، نه هر reading تاریخی | ParcelDossier.LatestReading؛ BagStorageService؛ ParcelEventConsumer | late-arrival/equal-time/cross-center service + host no-side-effect tests | Implemented |
 | OBS-001 | health live/ready/detail | ApiSupport و Gateway | API integration + manual probes | Implemented |
 | OBS-002 | Edge heartbeat/backlog/last sync | EdgeCore heartbeat؛ EdgeHealthService | contract/application/infrastructure tests | Implemented |
@@ -47,11 +47,11 @@
 | API-001 | Gateway routing/rate limiting | Core Gateway config/Program | API integration tests | Implemented |
 | API-002 | versioned Core REST و Swagger | Core API hosts + ApiSupport | API integration/OpenAPI review | Implemented |
 | API-003 | نمونه‌ی اجرایی تمام routeهای Phase 1 بدون secret | HTTP/Postman artefactهای `docs/api` | JSON parse + تطبیق خودکار method/URL دو collection + manual smoke | Implemented |
-| TST-001 | هر متد دست‌نویس .NET تست دارد | تمام `tests/*` | full `run-tests.ps1` evidence | Gate; final count pending |
+| TST-001 | هر متد دست‌نویس .NET تست دارد | تمام `tests/*` | 601/601 test و 1244/1244 متد در `docs/test-results/20260822-ed77486` | Verified |
 | DOC-001 | مستندات business/architecture/deployment/testing | README، `deploy.md`، docs | markdown/link/diagram review | Implemented |
 | DOC-002 | source و SVG دیاگرام‌ها | `docs/diagrams/*.mmd/*.svg` | `verify-diagrams.ps1` | Implemented |
-| OPS-001 | backup/rollback/runbook | `deploy.md` + operations runbook | rehearsal record | Documented; environment rehearsal required |
-| OPS-002 | composition توسعه‌ای کامل با auth-on، پنج SQL DB، Redis، Kafka-compatible، S3-compatible، Edge رمز‌شده و observability/HA profile | `compose.full.yaml`؛ `infra/`؛ `scripts/infra/test-full-dev.ps1` | real broker/object-store/outage/restart/load/TDE/SSE/HA evidence | Implemented; final E2E gate |
+| OPS-001 | backup/rollback/runbook | `deploy.md` + operations runbook | full-development TDE/backup/restart/HA rehearsal evidence | Verified locally |
+| OPS-002 | composition توسعه‌ای کامل با auth-on، پنج SQL DB، Redis، Kafka-compatible، S3-compatible، Edge رمز‌شده و observability/HA profile | `compose.full.yaml`؛ `infra/`؛ `scripts/infra/test-full-dev.ps1` | real broker/object-store/outage/restart/load/TDE/SSE/HA evidence | Implemented; E2E verified |
 | UI-001 | UI مدیریتی/تحلیلی | ندارد | ندارد | Out of Phase 1 |
 
 ## blocker register

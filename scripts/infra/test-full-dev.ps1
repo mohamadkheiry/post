@@ -866,7 +866,8 @@ try {
     Wait-SqlScalar -Expected '1' -Query "SET NOCOUNT ON; SELECT COUNT(*) FROM [PostParcelLifecycle].[dbo].[InboxMessages] WHERE [EventId]=N'$eventId'"
 
     $dlqMarker = "malformed-$runId"
-    Invoke-RpkProduce -Topic 'parcel.events.received' -Payload "{\"marker\":\"$dlqMarker\"}"
+    $dlqPayload = @{ marker = $dlqMarker } | ConvertTo-Json -Compress
+    Invoke-RpkProduce -Topic 'parcel.events.received' -Payload $dlqPayload
     $dlq = Wait-KafkaPayload -Topic 'parcel.events.received.dlq' -Marker $dlqMarker
     if ($dlq -notmatch '"Attempts"\s*:\s*2') { throw 'DLQ record did not prove the configured two delivery attempts.' }
     [void](Wait-KafkaPayload -Topic 'parcel.lifecycle.reading-recorded' -Marker $redisKey)

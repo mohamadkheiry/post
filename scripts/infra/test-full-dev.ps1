@@ -896,7 +896,7 @@ try {
             throw 'Loki did not return the real gateway correlation-scoped log.'
         }
 
-        $dashboard = Invoke-Compose -Capture -Arguments @('exec', '-T', 'grafana', '/bin/sh', '-ec', 'wget -qO- --user="$GF_SECURITY_ADMIN_USER" --password="$GF_SECURITY_ADMIN_PASSWORD" "http://localhost:3000/api/search?query=Post"')
+        $dashboard = Invoke-Compose -Capture -Arguments @('exec', '-T', 'grafana', '/bin/sh', '-ec', 'auth=$(printf "%s:%s" "$GF_SECURITY_ADMIN_USER" "$GF_SECURITY_ADMIN_PASSWORD" | base64 | tr -d "\n"); wget -qO- --header="Authorization: Basic $auth" "http://localhost:3000/api/search?query=Post"')
         if (-not $dashboard.Contains('post-platform-overview', [StringComparison]::Ordinal)) {
             throw 'Grafana did not provision the Post platform dashboard.'
         }

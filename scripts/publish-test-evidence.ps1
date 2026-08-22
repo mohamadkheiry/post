@@ -9,6 +9,16 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
+function Write-Utf8LfFile {
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [Parameter(Mandatory)][AllowEmptyString()][string]$Content
+    )
+
+    $normalized = $Content.Replace("`r`n", "`n").Replace("`r", "`n")
+    [IO.File]::WriteAllText($Path, $normalized, [Text.UTF8Encoding]::new($false))
+}
+
 $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $inputPath = [IO.Path]::GetFullPath((Join-Path $repositoryRoot $InputDirectory))
 if (-not (Test-Path -LiteralPath $inputPath -PathType Container)) {
@@ -194,18 +204,28 @@ if (-not [string]::IsNullOrWhiteSpace($RuntimeEvidencePath)) {
 }
 
 [IO.Directory]::CreateDirectory($outputPath) | Out-Null
-Copy-Item -LiteralPath $summaryPath -Destination (Join-Path $outputPath 'summary.md')
-Copy-Item -LiteralPath $environmentPath -Destination (Join-Path $outputPath 'environment.json')
-$curatedInventory |
-    Export-Csv -LiteralPath (Join-Path $outputPath 'test-inventory.csv') -NoTypeInformation -Encoding utf8
+Write-Utf8LfFile `
+    -Path (Join-Path $outputPath 'summary.md') `
+    -Content (Get-Content -LiteralPath $summaryPath -Raw)
+Write-Utf8LfFile `
+    -Path (Join-Path $outputPath 'environment.json') `
+    -Content (Get-Content -LiteralPath $environmentPath -Raw)
+$csvLines = @($curatedInventory | ConvertTo-Csv -NoTypeInformation)
+Write-Utf8LfFile `
+    -Path (Join-Path $outputPath 'test-inventory.csv') `
+    -Content ([string]::Join("`n", $csvLines) + "`n")
 if ($null -ne $resolvedRuntimeEvidencePath) {
-    Copy-Item -LiteralPath $resolvedRuntimeEvidencePath -Destination (Join-Path $outputPath 'runtime-e2e.json')
+    Write-Utf8LfFile `
+        -Path (Join-Path $outputPath 'runtime-e2e.json') `
+        -Content (Get-Content -LiteralPath $resolvedRuntimeEvidencePath -Raw)
 }
 
 $hashLines = foreach ($publishedFile in Get-ChildItem -LiteralPath $outputPath -File) {
     $hash = (Get-FileHash -LiteralPath $publishedFile.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
     "$hash  $($publishedFile.Name)"
 }
-$hashLines | Sort-Object | Set-Content -LiteralPath (Join-Path $outputPath 'checksums.sha256') -Encoding ascii
+Write-Utf8LfFile `
+    -Path (Join-Path $outputPath 'checksums.sha256') `
+    -Content ([string]::Join("`n", @($hashLines | Sort-Object)) + "`n")
 
 Write-Output "Published curated test evidence for commit $currentCommit to $relativeOutput."

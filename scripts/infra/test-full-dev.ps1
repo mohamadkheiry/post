@@ -212,6 +212,42 @@ function Wait-SqlScalar {
     throw "SQL assertion did not reach the expected scalar value before timeout."
 }
 
+function Wait-HaSynchronization {
+    param(
+        [Parameter(Mandatory)]
+        [ValidateSet('sql-primary', 'sql-secondary')]
+        [string]$PrimaryService,
+        [Parameter(Mandatory)]
+        [ValidateSet('sql-primary', 'sql-secondary')]
+        [string]$SecondaryService,
+        [int]$TimeoutSeconds = 300
+    )
+
+    $resumeSuspendedDatabases = @"
+SET NOCOUNT ON;
+DECLARE @resume nvarchar(max) = N'';
+SELECT @resume += N'ALTER DATABASE ' + QUOTENAME(DB_NAME(database_id)) + N' SET HADR RESUME;'
+FROM sys.dm_hadr_database_replica_states
+WHERE is_local = 1
+  AND is_suspended = 1
+  AND DB_NAME(database_id) IN (N'PostParcelLifecycle',N'PostDeviceConfig',N'PostEdgeHealth',N'PostOperationalResult',N'PostIdentity');
+IF LEN(@resume) > 0 EXEC sys.sp_executesql @resume;
+SELECT 'READY';
+"@
+    $synchronizedDatabaseCount = "SET NOCOUNT ON; SELECT COUNT(*) FROM sys.dm_hadr_database_replica_states WHERE is_local=0 AND synchronization_state_desc='SYNCHRONIZED'"
+    $deadline = [DateTimeOffset]::UtcNow.AddSeconds($TimeoutSeconds)
+    do {
+        [void](Invoke-SqlScalar -Service $SecondaryService -Query $resumeSuspendedDatabases)
+        $actual = Invoke-SqlScalar -Service $PrimaryService -Query $synchronizedDatabaseCount
+        if ([string]::Equals($actual, '5', [StringComparison]::Ordinal)) {
+            return
+        }
+        Start-Sleep -Seconds 2
+    } while ([DateTimeOffset]::UtcNow -lt $deadline)
+
+    throw "The Always On replicas did not synchronize all five databases before timeout."
+}
+
 function Invoke-ToolShell {
     param(
         [Parameter(Mandatory)][string]$Script,
@@ -926,16 +962,16 @@ try {
         if ($failoverCount -ne $authoritativeCount) { throw 'AG failover query did not preserve the authoritative parcel count.' }
         $failoverTdeCount = Invoke-SqlScalar -Service sql-secondary -Query "SET NOCOUNT ON; SELECT COUNT(*) FROM sys.databases WHERE name IN ('PostParcelLifecycle','PostDeviceConfig','PostEdgeHealth','PostOperationalResult','PostIdentity') AND is_encrypted=1"
         if ($failoverTdeCount -ne '5') { throw 'All five failover databases were not encrypted with TDE on the secondary.' }
-        [void](Invoke-SqlScalar -Service sql-primary -Query "ALTER AVAILABILITY GROUP [post_dev_ag] SET (ROLE = SECONDARY); ALTER DATABASE [PostParcelLifecycle] SET HADR RESUME; ALTER DATABASE [PostDeviceConfig] SET HADR RESUME; ALTER DATABASE [PostEdgeHealth] SET HADR RESUME; ALTER DATABASE [PostOperationalResult] SET HADR RESUME; ALTER DATABASE [PostIdentity] SET HADR RESUME; SET NOCOUNT ON; SELECT 'SECONDARY'")
-        Wait-SqlScalar -Service sql-secondary -Expected '5' -TimeoutSeconds 300 -Query "SET NOCOUNT ON; SELECT COUNT(*) FROM sys.dm_hadr_database_replica_states WHERE is_local=0 AND synchronization_state_desc='SYNCHRONIZED'"
+        [void](Invoke-SqlScalar -Service sql-primary -Query "ALTER AVAILABILITY GROUP [post_dev_ag] SET (ROLE = SECONDARY); SET NOCOUNT ON; SELECT 'SECONDARY'")
+        Wait-HaSynchronization -PrimaryService sql-secondary -SecondaryService sql-primary
 
         [void](Invoke-SqlScalar -Service sql-secondary -Query "ALTER AVAILABILITY GROUP [post_dev_ag] OFFLINE; SET NOCOUNT ON; SELECT 'OFFLINE'")
         [void](Invoke-SqlScalar -Service sql-primary -Query "ALTER AVAILABILITY GROUP [post_dev_ag] FORCE_FAILOVER_ALLOW_DATA_LOSS; SET NOCOUNT ON; SELECT 'PRIMARY'")
         Wait-SqlScalar -Service sql-primary -Expected 'PRIMARY' -TimeoutSeconds 180 -Query "SET NOCOUNT ON; SELECT role_desc FROM sys.dm_hadr_availability_replica_states WHERE is_local=1 AND group_id=(SELECT group_id FROM sys.availability_groups WHERE name=N'post_dev_ag')"
         $failbackCount = Invoke-SqlScalar -Service sql-primary -Query 'SET NOCOUNT ON; SELECT COUNT(*) FROM [PostParcelLifecycle].[dbo].[ReadingRecords]'
         if ($failbackCount -ne $authoritativeCount) { throw 'AG failback did not restore the authoritative parcel count.' }
-        [void](Invoke-SqlScalar -Service sql-secondary -Query "ALTER AVAILABILITY GROUP [post_dev_ag] SET (ROLE = SECONDARY); ALTER DATABASE [PostParcelLifecycle] SET HADR RESUME; ALTER DATABASE [PostDeviceConfig] SET HADR RESUME; ALTER DATABASE [PostEdgeHealth] SET HADR RESUME; ALTER DATABASE [PostOperationalResult] SET HADR RESUME; ALTER DATABASE [PostIdentity] SET HADR RESUME; SET NOCOUNT ON; SELECT 'SECONDARY'")
-        Wait-SqlScalar -Service sql-primary -Expected '5' -TimeoutSeconds 300 -Query "SET NOCOUNT ON; SELECT COUNT(*) FROM sys.dm_hadr_database_replica_states WHERE is_local=0 AND synchronization_state_desc='SYNCHRONIZED'"
+        [void](Invoke-SqlScalar -Service sql-secondary -Query "ALTER AVAILABILITY GROUP [post_dev_ag] SET (ROLE = SECONDARY); SET NOCOUNT ON; SELECT 'SECONDARY'")
+        Wait-HaSynchronization -PrimaryService sql-primary -SecondaryService sql-secondary
         Invoke-Compose -Arguments @('--profile', 'ha', 'stop', 'sql-secondary')
         Invoke-Compose -Arguments @('up', '-d', '--wait', '--wait-timeout', '300', 'redis', 'redpanda', 'redpanda-init', 'minio', 'minio-init', 'identity', 'data-ingestion', 'parcel-lifecycle', 'device-config', 'object-storage', 'edge-health', 'operational-result', 'gateway')
         Invoke-Compose -Arguments @('--profile', 'connected-edge', 'up', '-d', '--wait', '--wait-timeout', '240', 'edge')

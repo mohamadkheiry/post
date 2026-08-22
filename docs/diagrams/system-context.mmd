@@ -1,0 +1,20 @@
+flowchart LR
+    device["Sorting Device"]
+    admin["Operations Administrator"]
+    edge["Post Edge\nLocal operational continuity"]
+    core["Post Core\nControl, archive and reporting"]
+    postal["Postal Operational Systems\nHTTP, SQL and SOAP"]
+    storage["S3-compatible Object Storage"]
+    ops["Operations and Monitoring"]
+    edgeAdmin["Local Edge Administrator"]
+
+    device -->|"SignalR V1"| edge
+    edge -->|"Operational calls"| postal
+    edge -->|"Versioned events and health"| core
+    admin -->|"HTTPS / JWT"| core
+    core -->|"Configuration and lookup"| edge
+    edge -->|"Direct upload with pre-signed URL"| storage
+    core -->|"Metadata and pre-sign control"| storage
+    core -->|"Health, logs and metrics"| ops
+    edge -->|"Health, logs and metrics"| ops
+    edgeAdmin -->|"HTTPS local admin session"| edge

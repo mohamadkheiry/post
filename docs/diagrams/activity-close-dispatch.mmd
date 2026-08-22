@@ -1,0 +1,27 @@
+flowchart TD
+    start(["CloseDispatch received"])
+    valid{"Authenticated request valid?"}
+    replay{"Journal has operation?"}
+    select["Select closed bags owned by device and destination"]
+    any{"Any eligible bag?"}
+    intent["Commit external-operation intent before I/O"]
+    postal["Close dispatch through postal adapter"]
+    receipt["Persist deterministic upstream receipt immediately"]
+    committed{"Upstream completion confirmed?"}
+    persist["Persist dispatch, mark bags, journal and outbox"]
+    fail["Return Error and retain reconciliation evidence\nNo blind dispatch retry"]
+    reply["Return Completed or Error\nNo Queued result in V1"]
+
+    start --> valid
+    valid -->|"No"| fail --> reply
+    valid -->|"Yes"| replay
+    replay -->|"Stored response"| reply
+    replay -->|"Known receipt after crash"| committed
+    replay -->|"Unresolved intent"| fail
+    replay -->|"New operation"| select --> any
+    any -->|"No"| fail
+    any -->|"Yes"| intent --> postal
+    postal -->|"Definitive response"| receipt --> committed
+    postal -->|"Timeout / commit unknown"| fail
+    committed -->|"Yes"| persist --> reply
+    committed -->|"No / unknown"| fail

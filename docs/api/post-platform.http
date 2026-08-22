@@ -1,0 +1,447 @@
+# Post Platform Phase 1 - executable REST requests
+#
+# VS Code REST Client reads {{$processEnv NAME}} from the process that launched VS Code.
+# Rider users may replace only the token/credential variables from a private HTTP environment.
+# Never paste real secrets into this tracked file.
+
+# Direct dotnet Gateway default is 5298; Docker Compose publishes it on 7088.
+@coreBase = http://127.0.0.1:5298
+@edgeBase = http://127.0.0.1:7080
+@adminToken = {{$processEnv POST_ADMIN_TOKEN}}
+@edgeToken = {{$processEnv POST_EDGE_TOKEN}}
+@correlationId = 11111111-1111-4111-8111-111111111111
+@inboundOperationId = 22222222-2222-4222-8222-222222222221
+@bagOperationId = 22222222-2222-4222-8222-222222222222
+@dispatchOperationId = 22222222-2222-4222-8222-222222222223
+@parcelEventOperationId = 22222222-2222-4222-8222-222222222224
+@imageOperationId = 22222222-2222-4222-8222-222222222225
+@errorOperationId = 22222222-2222-4222-8222-222222222226
+@edgeEventOperationId = 22222222-2222-4222-8222-222222222228
+@resultOperationId = 22222222-2222-4222-8222-222222222229
+@registerDeviceOperationId = 22222222-2222-4222-8222-222222222230
+@updateDeviceOperationId = 22222222-2222-4222-8222-222222222231
+@activationOperationId = 22222222-2222-4222-8222-222222222232
+@configOperationId = 22222222-2222-4222-8222-222222222233
+@provisionEdgeOperationId = 22222222-2222-4222-8222-222222222234
+@rotateEdgeOperationId = 22222222-2222-4222-8222-222222222235
+@rotateDeviceOperationId = 22222222-2222-4222-8222-222222222236
+@disableEdgeOperationId = 22222222-2222-4222-8222-222222222237
+@edgeId = 33333333-3333-4333-8333-333333333333
+@deviceId = 44444444-4444-4444-8444-444444444444
+@readingId = 55555555-5555-4555-8555-555555555555
+@barcode = 12345678901234
+@bagBarcode = BAG-MANUAL-001
+@dispatchId = DISPATCH-MANUAL-001
+@centerCode = 12345
+@configurationVersion = 1
+@configurationEtag = "cfg-12345-1"
+
+### Core gateway health
+GET {{coreBase}}/health
+
+### Core gateway readiness
+GET {{coreBase}}/health/ready
+
+### Core gateway Prometheus metrics
+GET {{coreBase}}/metrics
+
+### Edge health
+GET {{edgeBase}}/health
+
+### Edge readiness
+GET {{edgeBase}}/health/ready
+
+### Edge Prometheus metrics
+GET {{edgeBase}}/metrics
+
+### Admin token - credential values come from process environment
+POST {{coreBase}}/api/auth/token
+Content-Type: application/json
+X-Correlation-ID: {{correlationId}}
+
+{
+  "userName": "{{$processEnv POST_ADMIN_USERNAME}}",
+  "password": "{{$processEnv POST_ADMIN_PASSWORD}}",
+  "tokenLifetimeSeconds": 3600
+}
+
+### Provision an Edge credential - response secret is shown exactly once
+# Disable response logging/capture and move deviceSecret directly to a secret store.
+POST {{coreBase}}/api/admin/edges
+Authorization: Bearer {{adminToken}}
+Idempotency-Key: {{provisionEdgeOperationId}}
+Content-Type: application/json
+X-Correlation-ID: {{correlationId}}
+
+{
+  "deviceId": "{{edgeId}}",
+  "logicalDeviceCode": "EDGE-12345-01",
+  "exchangeCenterCode": "{{centerCode}}"
+}
+
+### Rotate an Edge credential - replacement secret is shown exactly once
+# Use a new key for each intended rotation. A replay does not return the secret again.
+POST {{coreBase}}/api/admin/edges/{{edgeId}}/rotate-secret
+Authorization: Bearer {{adminToken}}
+Idempotency-Key: {{rotateEdgeOperationId}}
+X-Correlation-ID: {{correlationId}}
+
+### Edge token - credential values come from process environment
+POST {{coreBase}}/api/auth/edge-token
+Content-Type: application/json
+X-Correlation-ID: {{correlationId}}
+
+{
+  "logicalDeviceCode": "{{$processEnv POST_EDGE_LOGICAL_CODE}}",
+  "deviceSecret": "{{$processEnv POST_EDGE_DEVICE_SECRET}}",
+  "tokenLifetimeSeconds": 900
+}
+
+### Disable an Edge credential
+POST {{coreBase}}/api/admin/edges/{{edgeId}}/disable
+Authorization: Bearer {{adminToken}}
+Idempotency-Key: {{disableEdgeOperationId}}
+X-Correlation-ID: {{correlationId}}
+
+### Register a sorting device
+POST {{coreBase}}/api/admin/devices
+Authorization: Bearer {{adminToken}}
+Idempotency-Key: {{registerDeviceOperationId}}
+Content-Type: application/json
+X-Correlation-ID: {{correlationId}}
+
+{
+  "name": "Manual test device",
+  "deviceType": "Sorter",
+  "logicalCode": "MANUAL-01",
+  "owner": "QA",
+  "exchangeCenterCode": "{{centerCode}}",
+  "description": "Synthetic test fixture"
+}
+
+### List devices
+GET {{coreBase}}/api/admin/devices?page=1&pageSize=20
+Authorization: Bearer {{adminToken}}
+X-Correlation-ID: {{correlationId}}
+
+### Update device metadata
+PUT {{coreBase}}/api/admin/devices/{{deviceId}}
+Authorization: Bearer {{adminToken}}
+Idempotency-Key: {{updateDeviceOperationId}}
+Content-Type: application/json
+X-Correlation-ID: {{correlationId}}
+
+{
+  "name": "Manual test device updated",
+  "deviceType": "Sorter",
+  "owner": "QA",
+  "description": "Synthetic test fixture updated"
+}
+
+### Change device activation
+PATCH {{coreBase}}/api/admin/devices/{{deviceId}}
+Authorization: Bearer {{adminToken}}
+Idempotency-Key: {{activationOperationId}}
+Content-Type: application/json
+X-Correlation-ID: {{correlationId}}
+
+{
+  "active": true
+}
+
+### Rotate a sorting-device secret - replacement secret is shown exactly once
+# A replay does not return the secret again; move the first response to a secret store.
+POST {{coreBase}}/api/admin/devices/{{deviceId}}/rotate-secret
+Authorization: Bearer {{adminToken}}
+Idempotency-Key: {{rotateDeviceOperationId}}
+X-Correlation-ID: {{correlationId}}
+
+### Publish immutable center configuration
+POST {{coreBase}}/api/admin/config
+Authorization: Bearer {{adminToken}}
+Idempotency-Key: {{configOperationId}}
+Content-Type: application/json
+X-Correlation-ID: {{correlationId}}
+
+{
+  "exchangeCenterCode": "{{centerCode}}",
+  "postalCodes": ["{{centerCode}}"],
+  "shortReadingThresholdSeconds": 3600,
+  "returnThresholdSeconds": 86400,
+  "weightToleranceKg": 0.1,
+  "dimensionToleranceCm": 1.0,
+  "autoDispatchEnabled": false,
+  "maximumOpenBagMinutes": 60
+}
+
+### List admin-visible configurations
+GET {{coreBase}}/api/admin/config?exchangeCenterCode={{centerCode}}
+Authorization: Bearer {{adminToken}}
+X-Correlation-ID: {{correlationId}}
+
+### Edge configuration bootstrap - 200 with a quoted ETag when version 0 is stale
+GET {{coreBase}}/api/edge/config/bootstrap?exchangeCenterCode={{centerCode}}&currentVersion=0
+Authorization: Bearer {{edgeToken}}
+X-Correlation-ID: {{correlationId}}
+
+### Conditional Edge configuration bootstrap - 304 after configuration version 1 is current
+GET {{coreBase}}/api/edge/config/bootstrap?exchangeCenterCode={{centerCode}}&currentVersion={{configurationVersion}}
+Authorization: Bearer {{edgeToken}}
+If-None-Match: {{configurationEtag}}
+X-Correlation-ID: {{correlationId}}
+
+### Synchronous inbound query
+POST {{coreBase}}/api/edge/parcels/inbound-query
+Authorization: Bearer {{edgeToken}}
+Idempotency-Key: {{inboundOperationId}}
+Content-Type: application/json
+X-Correlation-ID: {{correlationId}}
+
+{
+  "idempotencyKey": "{{inboundOperationId}}",
+  "barcodes": ["{{barcode}}"],
+  "parcelType": "parcel",
+  "serviceType": "1",
+  "originCenterCode": "{{centerCode}}",
+  "destinationCenterCode": "54321",
+  "deviceId": "{{deviceId}}",
+  "exchangeCenterCode": "{{centerCode}}",
+  "physicalAttributes": {
+    "weightKg": 1.25,
+    "lengthCm": 30,
+    "widthCm": 20,
+    "heightCm": 12
+  },
+  "edgeEventTime": "2026-08-16T08:00:00Z",
+  "correlationId": "{{correlationId}}"
+}
+
+### Store a closed bag
+POST {{coreBase}}/api/edge/bags
+Authorization: Bearer {{edgeToken}}
+Idempotency-Key: {{bagOperationId}}
+Content-Type: application/json
+X-Correlation-ID: {{correlationId}}
+
+{
+  "bagBarcode": "{{bagBarcode}}",
+  "originCenterCode": "{{centerCode}}",
+  "destinationCenterCode": "54321",
+  "createdByDeviceId": "{{deviceId}}",
+  "memberBarcodes": ["{{barcode}}"],
+  "sealNumber": "SEAL-MANUAL-001",
+  "transportType": "Ground",
+  "closedAt": "2026-08-16T08:05:00Z",
+  "correlationId": "{{correlationId}}"
+}
+
+### Store a closed dispatch
+POST {{coreBase}}/api/edge/dispatches
+Authorization: Bearer {{edgeToken}}
+Idempotency-Key: {{dispatchOperationId}}
+Content-Type: application/json
+X-Correlation-ID: {{correlationId}}
+
+{
+  "dispatchId": "{{dispatchId}}",
+  "destinationCenterCode": "54321",
+  "bagBarcodes": ["{{bagBarcode}}"],
+  "closedAt": "2026-08-16T08:10:00Z",
+  "correlationId": "{{correlationId}}"
+}
+
+### Search parcels
+GET {{coreBase}}/api/admin/parcels?page=1&pageSize=20&barcode={{barcode}}
+Authorization: Bearer {{adminToken}}
+X-Correlation-ID: {{correlationId}}
+
+### Get parcel tracking
+GET {{coreBase}}/api/admin/parcels/{{barcode}}
+Authorization: Bearer {{adminToken}}
+X-Correlation-ID: {{correlationId}}
+
+### Get bag tracking
+GET {{coreBase}}/api/admin/bags/{{bagBarcode}}
+Authorization: Bearer {{adminToken}}
+X-Correlation-ID: {{correlationId}}
+
+### Get dispatch tracking
+GET {{coreBase}}/api/admin/dispatches/{{dispatchId}}
+Authorization: Bearer {{adminToken}}
+X-Correlation-ID: {{correlationId}}
+
+### Publish final parcel event
+POST {{coreBase}}/api/edge/parcel-events
+Authorization: Bearer {{edgeToken}}
+Idempotency-Key: {{parcelEventOperationId}}
+Content-Type: application/json
+X-Correlation-ID: {{correlationId}}
+
+{
+  "eventId": "66666666-6666-4666-8666-666666666666",
+  "edgeId": "{{edgeId}}",
+  "exchangeCenterCode": "{{centerCode}}",
+  "topic": "parcel.events.received",
+  "idempotencyKey": "{{parcelEventOperationId}}",
+  "correlationId": "{{correlationId}}",
+  "payload": {
+    "parcelBarcode": "{{barcode}}",
+    "finalStatus": "Success"
+  },
+  "occurredAt": "2026-08-16T08:02:00Z"
+}
+
+### Request a server-derived, Edge-bound upload URL
+# @name createPresignedUpload
+POST {{coreBase}}/api/edge/images/presigned-url
+Authorization: Bearer {{edgeToken}}
+Content-Type: application/json
+X-Correlation-ID: {{correlationId}}
+
+{
+  "eventId": "77777777-7777-4777-8777-777777777777",
+  "readingRecordId": "{{readingId}}",
+  "attachmentType": "front",
+  "contentType": "image/jpeg",
+  "contentLength": 4,
+  "lifetimeSeconds": 300
+}
+
+### PUT exactly contentLength bytes to createPresignedUpload.response.body.uploadUrl
+### with Content-Type image/jpeg and every returned requiredHeaders entry
+### (Production requires x-amz-server-side-encryption: AES256) before publishing metadata.
+
+### Publish image metadata
+POST {{coreBase}}/api/edge/images/metadata
+Authorization: Bearer {{edgeToken}}
+Idempotency-Key: {{imageOperationId}}
+Content-Type: application/json
+X-Correlation-ID: {{correlationId}}
+
+{
+  "eventId": "77777777-7777-4777-8777-777777777777",
+  "edgeId": "{{edgeId}}",
+  "exchangeCenterCode": "{{centerCode}}",
+  "parcelBarcode": "{{barcode}}",
+  "readingRecordId": "{{readingId}}",
+  "objectKey": "{{createPresignedUpload.response.body.$.objectKey}}",
+  "contentType": "image/jpeg",
+  "attachmentType": "front",
+  "idempotencyKey": "{{imageOperationId}}",
+  "correlationId": "{{correlationId}}",
+  "receivedAt": "2026-08-16T08:03:00Z"
+}
+
+### Publish a safe integration error event
+POST {{coreBase}}/api/edge/errors
+Authorization: Bearer {{edgeToken}}
+Idempotency-Key: {{errorOperationId}}
+Content-Type: application/json
+X-Correlation-ID: {{correlationId}}
+
+{
+  "eventId": "88888888-8888-4888-8888-888888888888",
+  "edgeId": "{{edgeId}}",
+  "exchangeCenterCode": "{{centerCode}}",
+  "topic": "edge.integration-error.v1",
+  "idempotencyKey": "{{errorOperationId}}",
+  "correlationId": "{{correlationId}}",
+  "payload": {
+    "code": "sandbox.timeout",
+    "message": "Synthetic timeout without private response content"
+  },
+  "occurredAt": "2026-08-16T08:04:00Z"
+}
+
+### Register Edge
+POST {{coreBase}}/api/edge/registration
+Authorization: Bearer {{edgeToken}}
+Content-Type: application/json
+X-Correlation-ID: {{correlationId}}
+
+{
+  "edgeId": "{{edgeId}}",
+  "exchangeCenterCode": "{{centerCode}}",
+  "softwareVersion": "manual-test",
+  "configurationVersion": 1,
+  "registeredAt": "2026-08-16T08:00:00Z"
+}
+
+### Edge heartbeat
+POST {{coreBase}}/api/edge/heartbeat
+Authorization: Bearer {{edgeToken}}
+Content-Type: application/json
+X-Correlation-ID: {{correlationId}}
+
+{
+  "edgeId": "{{edgeId}}",
+  "heartbeatAt": "2026-08-16T08:01:00Z",
+  "softwareVersion": "manual-test",
+  "configurationVersion": 1,
+  "availableDiskBytes": 10737418240,
+  "pendingCount": 0,
+  "failedCount": 0,
+  "deadLetterCount": 0,
+  "lastSuccessfulSync": "2026-08-16T08:00:30Z"
+}
+
+### Publish Edge operational event
+POST {{coreBase}}/api/edge/events
+Authorization: Bearer {{edgeToken}}
+Idempotency-Key: {{edgeEventOperationId}}
+Content-Type: application/json
+X-Correlation-ID: {{correlationId}}
+
+{
+  "eventType": "Authenticated",
+  "edgeId": "{{edgeId}}",
+  "deviceId": "{{deviceId}}",
+  "correlationId": "{{correlationId}}",
+  "occurredAt": "2026-08-16T08:01:00Z"
+}
+
+### List Edge health
+GET {{coreBase}}/api/admin/edges/health
+Authorization: Bearer {{adminToken}}
+X-Correlation-ID: {{correlationId}}
+
+### Store an operational result
+POST {{coreBase}}/api/edge/operational-results
+Authorization: Bearer {{edgeToken}}
+Idempotency-Key: {{resultOperationId}}
+Content-Type: application/json
+X-Correlation-ID: {{correlationId}}
+
+{
+  "edgeId": "{{edgeId}}",
+  "exchangeCenterCode": "{{centerCode}}",
+  "idempotencyKey": "{{resultOperationId}}",
+  "correlationId": "{{correlationId}}",
+  "parcelBarcode": "{{barcode}}",
+  "callResult": "Accepted",
+  "success": true,
+  "calledAt": "2026-08-16T08:00:00Z",
+  "respondedAt": "2026-08-16T08:00:01Z",
+  "attempts": 1,
+  "finalStatus": "Succeeded"
+}
+
+### Update device IP binding on Edge
+PUT {{edgeBase}}/admin/devices/manual-device/ip
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+X-Correlation-ID: {{correlationId}}
+
+{
+  "ipAddresses": ["127.0.0.1"]
+}
+
+### Edge safe operational status
+GET {{edgeBase}}/api/edge/status
+Authorization: Bearer {{adminToken}}
+X-Correlation-ID: {{correlationId}}
+
+### SignalR WebSocket transport endpoint
+# A SignalR client must send its JSON handshake followed by the 0x1e record separator.
+# Prefer Post.DeviceSimulator for full Auth/RegisterInbound/AssignDestination/CloseBag/CloseDispatch.
+WEBSOCKET ws://127.0.0.1:7080/ws/device

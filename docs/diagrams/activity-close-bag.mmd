@@ -1,0 +1,33 @@
+flowchart TD
+    start(["CloseBag received"])
+    valid{"Authenticated and request valid?"}
+    replay{"Journal has operation?"}
+    lock["Acquire device + destination lock"]
+    select["Select eligible parcels by destination and array filters\nCount remains informational"]
+    any{"Any eligible parcel?"}
+    intent["Commit external-operation intent before I/O"]
+    postal["Register bag and parcels with postal adapter"]
+    receipt["Persist deterministic upstream receipt immediately"]
+    result{"Postal result"}
+    complete["Persist closed bag, membership, journal and outbox"]
+    allfail["Persist AllParcelsFailed with per-parcel errors"]
+    label["Persist explicitly acknowledged closure / LabelPending"]
+    manual["Mark manual reconciliation required\nNo blind CreateBag retry"]
+    fail["Persist safe Error response when policy allows"]
+    reply["Release lock and return V1 result"]
+
+    start --> valid
+    valid -->|"No"| fail --> reply
+    valid -->|"Yes"| replay
+    replay -->|"Stored response"| reply
+    replay -->|"Known receipt after crash"| result
+    replay -->|"Unresolved intent"| manual --> reply
+    replay -->|"New operation"| lock --> select --> any
+    any -->|"No"| reply
+    any -->|"Yes"| intent --> postal
+    postal -->|"Definitive response"| receipt --> result
+    postal -->|"Timeout / commit unknown"| manual
+    result -->|"Completed or partial"| complete --> reply
+    result -->|"All failed"| allfail --> reply
+    result -->|"Physical close, label pending"| label --> reply
+    result -->|"Terminal error"| fail

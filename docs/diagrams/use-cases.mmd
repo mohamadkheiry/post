@@ -1,0 +1,39 @@
+flowchart LR
+    device(["Sorting Device"])
+    operator(["Center Operator"])
+    admin(["Platform Administrator"])
+    support(["Operations Support"])
+    edgeAdmin(["Local Edge Administrator"])
+
+    auth(("Authenticate device"))
+    inbound(("Register inbound"))
+    assign(("Assign destination"))
+    bag(("Close bag"))
+    dispatch(("Close dispatch"))
+    config(("Manage devices and configuration"))
+    track(("Track parcel / inspect health"))
+    replay(("Investigate and requeue dead letter"))
+    audit(("Review operational audit"))
+    edgeLogin(("Authenticate to local Edge"))
+    bindIp(("Manage device IP bindings"))
+    rotateLocal(("Rotate local admin password"))
+    inspectEdge(("Inspect Edge backlog and reconciliation"))
+
+    device --> auth
+    device --> inbound
+    device --> assign
+    device --> bag
+    device --> dispatch
+    operator --> track
+    admin --> config
+    admin --> track
+    support --> replay
+    support --> audit
+    edgeAdmin --> edgeLogin
+    edgeAdmin --> bindIp
+    edgeAdmin --> rotateLocal
+    edgeAdmin --> inspectEdge
+    auth -.->|"required before"| inbound
+    inbound -.->|"precedes"| assign
+    assign -.->|"eligible for"| bag
+    bag -.->|"eligible for"| dispatch

@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <ProjectReference Include="..\Post.Core.Application\Post.Core.Application.csproj" />
+    <ProjectReference Include="..\Post.Core.Infrastructure\Post.Core.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Shared\Post.ApiSupport\Post.ApiSupport.csproj" />
+  </ItemGroup>
+
+</Project>

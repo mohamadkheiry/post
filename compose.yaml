@@ -1,0 +1,195 @@
+name: post-platform
+
+x-runtime-defaults: &runtime-defaults
+  restart: unless-stopped
+  read_only: true
+  tmpfs:
+    - /tmp:size=64m,mode=1777
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  networks:
+    - post-backend
+
+x-core-defaults: &core-defaults
+  <<: *runtime-defaults
+  environment:
+    ASPNETCORE_ENVIRONMENT: Development
+    ASPNETCORE_HTTP_PORTS: "8080"
+    Api__AuthenticationEnabled: "false"
+    Api__SwaggerEnabled: "true"
+    Api__DevelopmentIdentity__Enabled: "true"
+    Api__DevelopmentIdentity__EdgeId: "33333333-3333-4333-8333-333333333333"
+    Api__DevelopmentIdentity__ExchangeCenterCode: "12345"
+    Core__Database__Provider: Sqlite
+    Core__Database__Directory: /data/core
+    Core__Database__ApplyMigrations: "false"
+    Core__Outbox__Enabled: "true"
+
+services:
+  gateway:
+    <<: *runtime-defaults
+    networks:
+      - post-backend
+      - post-ingress
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PROJECT: src/Core/Post.Core.Gateway/Post.Core.Gateway.csproj
+    command: ["Post.Core.Gateway.dll"]
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_HTTP_PORTS: "8080"
+      ReverseProxy__Clusters__identity__Destinations__primary__Address: http://identity:8080/
+      ReverseProxy__Clusters__data-ingestion__Destinations__primary__Address: http://data-ingestion:8080/
+      ReverseProxy__Clusters__parcel-lifecycle__Destinations__primary__Address: http://parcel-lifecycle:8080/
+      ReverseProxy__Clusters__device-config__Destinations__primary__Address: http://device-config:8080/
+      ReverseProxy__Clusters__object-storage__Destinations__primary__Address: http://object-storage:8080/
+      ReverseProxy__Clusters__edge-health__Destinations__primary__Address: http://edge-health:8080/
+      ReverseProxy__Clusters__operational-result__Destinations__primary__Address: http://operational-result:8080/
+    ports:
+      - "127.0.0.1:7088:8080"
+    depends_on:
+      - identity
+      - data-ingestion
+      - parcel-lifecycle
+      - device-config
+      - object-storage
+      - edge-health
+      - operational-result
+
+  identity:
+    <<: *core-defaults
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PROJECT: src/Core/Post.Core.Identity.Api/Post.Core.Identity.Api.csproj
+    command: ["Post.Core.Identity.Api.dll"]
+    volumes:
+      - identity-data:/data/core
+
+  data-ingestion:
+    <<: *core-defaults
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PROJECT: src/Core/Post.Core.DataIngestion.Api/Post.Core.DataIngestion.Api.csproj
+    command: ["Post.Core.DataIngestion.Api.dll"]
+
+  parcel-lifecycle:
+    <<: *core-defaults
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PROJECT: src/Core/Post.Core.ParcelLifecycle.Api/Post.Core.ParcelLifecycle.Api.csproj
+    command: ["Post.Core.ParcelLifecycle.Api.dll"]
+    volumes:
+      - parcel-lifecycle-data:/data/core
+
+  device-config:
+    <<: *core-defaults
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PROJECT: src/Core/Post.Core.DeviceConfig.Api/Post.Core.DeviceConfig.Api.csproj
+    command: ["Post.Core.DeviceConfig.Api.dll"]
+    volumes:
+      - device-config-data:/data/core
+
+  object-storage:
+    <<: *core-defaults
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PROJECT: src/Core/Post.Core.ObjectStorage.Api/Post.Core.ObjectStorage.Api.csproj
+    command: ["Post.Core.ObjectStorage.Api.dll"]
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_HTTP_PORTS: "8080"
+      Api__AuthenticationEnabled: "false"
+      Api__SwaggerEnabled: "true"
+      Api__DevelopmentIdentity__Enabled: "true"
+      Api__DevelopmentIdentity__EdgeId: "33333333-3333-4333-8333-333333333333"
+      Api__DevelopmentIdentity__ExchangeCenterCode: "12345"
+      Core__Database__Provider: Sqlite
+      Core__Database__Directory: /data/core
+      Core__Database__ApplyMigrations: "false"
+      Core__Outbox__Enabled: "false"
+
+  edge-health:
+    <<: *core-defaults
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PROJECT: src/Core/Post.Core.EdgeHealth.Api/Post.Core.EdgeHealth.Api.csproj
+    command: ["Post.Core.EdgeHealth.Api.dll"]
+    volumes:
+      - edge-health-data:/data/core
+
+  operational-result:
+    <<: *core-defaults
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PROJECT: src/Core/Post.Core.OperationalResult.Api/Post.Core.OperationalResult.Api.csproj
+    command: ["Post.Core.OperationalResult.Api.dll"]
+    volumes:
+      - operational-result-data:/data/core
+
+  edge:
+    <<: *runtime-defaults
+    networks:
+      - post-backend
+      - post-ingress
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PROJECT: src/Edge/Post.Edge.Api/Post.Edge.Api.csproj
+    command: ["Post.Edge.Api.dll"]
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_HTTP_PORTS: "8080"
+      Api__AuthenticationEnabled: "false"
+      Api__SwaggerEnabled: "true"
+      Edge__Integrations__Profile: Mock
+      Edge__Storage__ConnectionString: Data Source=/data/edge/edge.db
+      Edge__Storage__ApplyMigrationsOnStartup: "true"
+      Edge__Security__AllowUnboundDevices: "true"
+      # Loopback-only Mock mode deliberately has no generated administrator
+      # secret. The auth-on connected overlay overrides this value.
+      Edge__LocalAdmin__AuthenticationEnabled: "false"
+      Edge__Mock__CenterCode: "59544"
+      Edge__Mock__Devices__0__DeviceId: local-simulator-device
+      Edge__Mock__Devices__0__LogicalId: LOCAL-01
+      Edge__Mock__Devices__0__Token: local-simulator-token
+    ports:
+      - "127.0.0.1:7080:8080"
+    volumes:
+      - edge-data:/data/edge
+
+networks:
+  post-backend:
+    internal: false
+  post-ingress:
+    # Only the two explicitly published HTTP entry points join this network.
+    # Full/connected mode makes post-backend internal while retaining loopback
+    # publication through this otherwise unshared bridge.
+    internal: false
+
+volumes:
+  identity-data:
+  parcel-lifecycle-data:
+  device-config-data:
+  edge-health-data:
+  operational-result-data:
+  edge-data:

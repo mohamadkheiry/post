@@ -1,0 +1,29 @@
+flowchart TD
+    start(["RegisterInbound received"])
+    validate{"Envelope, session and payload valid?"}
+    replay{"Journal response or saga exists?"}
+    normalize["Normalize barcode aliases and attributes"]
+    intent["Commit external-operation intent before I/O"]
+    lookup["Call configured lookup / postal adapters"]
+    receipt["Persist deterministic upstream receipt immediately"]
+    outcome{"Outcome"}
+    persist["Persist parcel, journal and outbox atomically"]
+    pending["Persist explicitly acknowledged pending work"]
+    manual["Mark manual reconciliation required\nNever retry commit-unknown blindly"]
+    reject["Persist terminal returned/refused/error result when required"]
+    reply["Map Core/domain status to Device V1"]
+    error["Return protocol/auth error without business side effect"]
+    done(["Response"])
+
+    start --> validate
+    validate -->|"No"| error --> done
+    validate -->|"Yes"| replay
+    replay -->|"Stored response"| reply --> done
+    replay -->|"Known receipt after crash"| outcome
+    replay -->|"Unresolved intent"| manual --> reply
+    replay -->|"New operation"| normalize --> intent --> lookup
+    lookup -->|"Definitive response"| receipt --> outcome
+    lookup -->|"Timeout / commit unknown"| manual
+    outcome -->|"Registered"| persist --> reply
+    outcome -->|"Upstream explicitly pending"| pending --> reply
+    outcome -->|"Returned / refused / terminal"| reject --> reply

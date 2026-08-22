@@ -1,0 +1,38 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.11" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.11" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit.v3" Version="3.2.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Shared\Post.ApiSupport\Post.ApiSupport.csproj" />
+    <ProjectReference Include="..\..\src\Core\Post.Core.ApiSupport\Post.Core.ApiSupport.csproj" />
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Edge\Post.Edge.Api\Post.Edge.Api.csproj" />
+    <ProjectReference Include="..\..\tools\Post.DeviceSimulator\Post.DeviceSimulator.csproj" />
+    <ProjectReference Include="..\..\src\Core\Post.Core.ParcelLifecycle.Api\Post.Core.ParcelLifecycle.Api.csproj" />
+    <ProjectReference Include="..\..\src\Core\Post.Core.DataIngestion.Api\Post.Core.DataIngestion.Api.csproj" />
+    <ProjectReference Include="..\..\src\Core\Post.Core.DeviceConfig.Api\Post.Core.DeviceConfig.Api.csproj" />
+    <ProjectReference Include="..\..\src\Core\Post.Core.EdgeHealth.Api\Post.Core.EdgeHealth.Api.csproj" />
+    <ProjectReference Include="..\..\src\Core\Post.Core.OperationalResult.Api\Post.Core.OperationalResult.Api.csproj" />
+    <ProjectReference Include="..\..\src\Core\Post.Core.ObjectStorage.Api\Post.Core.ObjectStorage.Api.csproj" />
+    <ProjectReference Include="..\..\src\Core\Post.Core.Identity.Api\Post.Core.Identity.Api.csproj" />
+    <ProjectReference Include="..\..\src\Core\Post.Core.Gateway\Post.Core.Gateway.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,61 @@
+flowchart TB
+    subgraph Center["Exchange Center"]
+        device["Sorting Device"]
+        edgeApi["Edge API / SignalR Host"]
+        edgeApp["Edge Application and Domain"]
+        edgeWorkers["Pending and Outbox Workers"]
+        sqlite[("Encrypted SQLite3MC\nDB / WAL / SHM / backup\nJournal / Outbox / Operational State")]
+        adapters["Mock or Connected Adapters"]
+        device -->|"/ws/device"| edgeApi
+        edgeApi --> edgeApp
+        edgeApp --> sqlite
+        edgeWorkers --> sqlite
+        edgeWorkers --> adapters
+        edgeApp --> adapters
+    end
+
+    subgraph Datacenter["Core Platform"]
+        gateway["YARP API Gateway"]
+        identity["Identity API"]
+        ingestion["Data Ingestion API"]
+        lifecycle["Parcel Lifecycle API"]
+        config["Device Config API"]
+        objectApi["Object Storage API"]
+        health["Edge Health API"]
+        result["Operational Result API"]
+        coreDb[("Five logical Core databases\nSQL Server / TDE")]
+        gateway --> identity
+        gateway --> ingestion
+        gateway --> lifecycle
+        gateway --> config
+        gateway --> objectApi
+        gateway --> health
+        gateway --> result
+        identity --> coreDb
+        lifecycle --> coreDb
+        config --> coreDb
+        health --> coreDb
+        result --> coreDb
+    end
+
+    postal["Postal HTTP / SQL / SOAP"]
+    broker["Kafka-compatible Broker"]
+    objectStore["S3-compatible Storage\nSSE required"]
+    redis["Redis idempotency mirror\nrebuildable; SQL authoritative"]
+    admin["Admin / API Client"]
+    edgeAdmin["Local Edge Administrator"]
+    monitoring["Prometheus / centralized logs / dashboards"]
+
+    adapters --> postal
+    adapters --> gateway
+    admin --> gateway
+    edgeAdmin -->|"Local bearer session"| edgeApi
+    ingestion --> broker
+    broker -->|"Parcel and image metadata"| lifecycle
+    objectApi -->|"Pre-sign control; no image body"| objectStore
+    edgeWorkers -->|"Pre-signed PUT"| objectStore
+    lifecycle -->|"Post-commit mirror and repair"| redis
+    result -->|"Post-commit mirror and repair"| redis
+    edgeApi --> monitoring
+    gateway --> monitoring
+    lifecycle --> monitoring

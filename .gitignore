@@ -1,0 +1,47 @@
+# Build output
+**/bin/
+**/obj/
+artifacts/
+publish/
+
+# IDE and OS files
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+.DS_Store
+Thumbs.db
+
+# Test output (curated reports under docs/test-results are committed)
+TestResults/
+coverage/
+*.trx
+*.coverage
+*.coveragexml
+
+# Local runtime state
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+logs/
+*.log
+
+# Secrets and certificates
+.env
+.env.*
+!.env.example
+.secrets/
+secrets/
+*.pfx
+*.p12
+*.key
+appsettings.Local.json
+
+# Original supplied requirement archive is confidential and contains a plaintext credential.
+_requirements/
+
+# Local tooling
+.config/dotnet-tools.json.user

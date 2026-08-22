@@ -1,0 +1,152 @@
+erDiagram
+    DEVICE_SESSION {
+        string connection_id PK
+        uuid session_id UK
+        string device_id
+        datetime authenticated_at
+    }
+    DEVICE_NETWORK_BINDING {
+        string device_id PK
+        string ip_address PK
+    }
+    DEVICE_CONNECTION_EVENT {
+        uuid event_id PK
+        string connection_id
+        string device_id
+        string event_type
+        datetime occurred_at
+    }
+    LOCAL_ADMINISTRATOR {
+        int id PK
+        string normalized_user_name UK
+        string password_verifier
+        datetime updated_at
+    }
+    LOCAL_ADMIN_SESSION {
+        string token_hash PK
+        string user_name
+        datetime expires_at
+    }
+    EDGE_PARCEL {
+        uuid read_id PK
+        string canonical_barcode
+        string device_id
+        string destination_code
+        string state
+        datetime read_timestamp
+    }
+    EDGE_BAG {
+        string bag_barcode PK
+        uuid operation_id UK
+        string device_id
+        string destination_code
+        string dispatch_id
+    }
+    EDGE_DISPATCH {
+        uuid operation_id PK
+        string dispatch_id UK
+        string device_id
+        string destination_code
+    }
+    OPERATION_JOURNAL {
+        uuid operation_id PK
+        string operation_type PK
+        string response_json
+        datetime created_at
+    }
+    EXTERNAL_OPERATION_SAGA {
+        uuid operation_id PK
+        string operation_type PK
+        string request_hash
+        string intent_json
+        string receipt_json
+        boolean finalized
+        datetime updated_at
+    }
+    PENDING_WORK {
+        uuid operation_id PK
+        string work_type
+        int attempts
+        datetime next_attempt_at
+        string terminal_state
+    }
+    OUTBOX {
+        uuid message_id PK
+        string idempotency_key UK
+        string target
+        string message_type
+        datetime next_attempt_at
+    }
+    DEAD_LETTER {
+        uuid message_id PK
+        string idempotency_key
+        int attempts
+        datetime failed_at
+    }
+    CONFIGURATION_SNAPSHOT {
+        int id PK
+        long version
+        string center_code
+        datetime published_at
+    }
+    CORE_PARCEL_DOSSIER {
+        string barcode PK
+        string origin_center
+        string destination_center
+        string final_status
+    }
+    CORE_READING {
+        uuid reading_id PK
+        string barcode FK
+        string correlation_id
+        datetime occurred_at
+    }
+    CORE_BAG {
+        string bag_barcode PK
+        string destination_center
+        datetime closed_at
+    }
+    CORE_DISPATCH {
+        string dispatch_id PK
+        string destination_center
+        datetime closed_at
+    }
+    EDGE_HEALTH {
+        uuid edge_id PK
+        string center_code
+        datetime last_heartbeat
+        int pending_count
+    }
+    CORE_IDEMPOTENCY_RECORD {
+        string idempotency_key PK
+        string request_hash
+        string response_snapshot
+        string status
+        datetime updated_at
+    }
+    REDIS_IDEMPOTENCY_SNAPSHOT {
+        string scoped_key PK
+        int schema_version
+        string request_hash
+        string status
+        datetime expires_at
+    }
+
+    DEVICE_NETWORK_BINDING ||--o{ DEVICE_SESSION : permits
+    DEVICE_SESSION ||--o{ DEVICE_CONNECTION_EVENT : records
+    DEVICE_SESSION ||--o{ EDGE_PARCEL : creates
+    LOCAL_ADMINISTRATOR ||--o{ LOCAL_ADMIN_SESSION : issues
+    EDGE_PARCEL }o--o| EDGE_BAG : assigned_to
+    EDGE_BAG }o--o| EDGE_DISPATCH : included_in
+    OPERATION_JOURNAL ||--o| EDGE_PARCEL : replays
+    OPERATION_JOURNAL ||--o| EDGE_BAG : replays
+    OPERATION_JOURNAL ||--o| EDGE_DISPATCH : replays
+    EXTERNAL_OPERATION_SAGA ||--o| OPERATION_JOURNAL : finalizes_to
+    EXTERNAL_OPERATION_SAGA ||--o| PENDING_WORK : may_require
+    OUTBOX ||--o| DEAD_LETTER : may_become
+    CONFIGURATION_SNAPSHOT ||--o{ DEVICE_SESSION : authorizes
+    CORE_PARCEL_DOSSIER ||--o{ CORE_READING : contains
+    CORE_PARCEL_DOSSIER }o--o| CORE_BAG : archived_in
+    CORE_BAG }o--o| CORE_DISPATCH : archived_in
+    EDGE_HEALTH ||--o{ CORE_READING : reports_source
+    CORE_IDEMPOTENCY_RECORD ||--o| REDIS_IDEMPOTENCY_SNAPSHOT : mirrors_after_commit

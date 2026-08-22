@@ -1,0 +1,18 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: post-platform
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - gateway:8080
+          - identity:8080
+          - data-ingestion:8080
+          - parcel-lifecycle:8080
+          - device-config:8080
+          - object-storage:8080
+          - edge-health:8080
+          - operational-result:8080
+          - edge:8080

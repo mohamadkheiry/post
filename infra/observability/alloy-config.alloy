@@ -1,0 +1,37 @@
+discovery.docker "post_containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+discovery.relabel "post_containers" {
+  targets = discovery.docker.post_containers.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
+    regex         = "post-platform-final"
+    action        = "keep"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+    replacement   = "$1"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service"
+  }
+}
+
+loki.source.docker "post_containers" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.relabel.post_containers.output
+  forward_to = [loki.write.post.receiver]
+}
+
+loki.write "post" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

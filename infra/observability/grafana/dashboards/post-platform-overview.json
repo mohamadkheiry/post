@@ -1,0 +1,38 @@
+{
+  "annotations": { "list": [] },
+  "editable": false,
+  "panels": [
+    {
+      "datasource": { "type": "prometheus", "uid": "post-prometheus" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "id": 1,
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" } },
+      "targets": [
+        { "expr": "up{job=\"post-platform\"}", "legendFormat": "{{instance}}", "refId": "A" }
+      ],
+      "title": "Service scrape health",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "loki", "uid": "post-loki" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "id": 2,
+      "options": { "dedupStrategy": "none", "enableLogDetails": true, "showTime": true },
+      "targets": [
+        { "expr": "{service=~\".+\"} | json", "refId": "A" }
+      ],
+      "title": "Structured application logs",
+      "type": "logs"
+    }
+  ],
+  "refresh": "15s",
+  "schemaVersion": 41,
+  "tags": ["post", "phase1"],
+  "templating": { "list": [] },
+  "time": { "from": "now-30m", "to": "now" },
+  "timezone": "browser",
+  "title": "Post Platform Overview",
+  "uid": "post-platform-overview",
+  "version": 1
+}

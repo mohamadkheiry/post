@@ -1,0 +1,40 @@
+flowchart TB
+    subgraph EdgeNode["Edge Node - single active Phase 1"]
+        edgeProcess["Post.Edge.Api process"]
+        edgeVolume[("Persistent local volume\nEncrypted DB / WAL / SHM / backup")]
+        edgeSecrets["External secret provider"]
+        edgeProcess --> edgeVolume
+        edgeSecrets --> edgeProcess
+    end
+
+    subgraph CoreCluster["Core compute cluster"]
+        ingress["TLS Ingress / Load Balancer"]
+        gateway["Gateway replicas"]
+        api["Bounded API replicas"]
+        migration["One-shot migration job"]
+        coreSecrets["Secret manager / CSI"]
+        ingress --> gateway
+        gateway --> api
+        coreSecrets --> gateway
+        coreSecrets --> api
+        coreSecrets --> migration
+    end
+
+    sql[("SQL Server\n5 logical databases / TDE")]
+    redis[("Redis idempotency mirror\nrebuildable; SQL authoritative")]
+    broker[("Kafka-compatible broker")]
+    s3[("S3-compatible object storage\nSSE required")]
+    postal["Postal network zone"]
+    monitoring["External telemetry backend"]
+
+    edgeProcess -->|"TLS / JWT"| ingress
+    edgeProcess -->|"Restricted egress"| postal
+    api --> sql
+    migration --> sql
+    api -->|"Post-commit mirror and repair"| redis
+    api --> broker
+    api --> s3
+    edgeProcess --> s3
+    edgeProcess --> monitoring
+    gateway --> monitoring
+    api --> monitoring

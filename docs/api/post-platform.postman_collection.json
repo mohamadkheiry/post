@@ -1,0 +1,467 @@
+{
+  "info": {
+    "_postman_id": "76e7d432-4037-4f56-8d08-7f494463c001",
+    "name": "Post Platform Phase 1",
+    "description": "Executable, synthetic requests for the Phase 1 route surface. Import the example environment, copy it locally, and supply secrets only through Postman's secret/current-value storage. Never export a populated environment.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "coreBase", "value": "http://127.0.0.1:5298" },
+    { "key": "edgeBase", "value": "http://127.0.0.1:7080" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        { "name": "Core health", "request": { "method": "GET", "url": "{{coreBase}}/health" } },
+        { "name": "Core readiness", "request": { "method": "GET", "url": "{{coreBase}}/health/ready" } },
+        { "name": "Core metrics", "request": { "method": "GET", "url": "{{coreBase}}/metrics" } },
+        { "name": "Edge health", "request": { "method": "GET", "url": "{{edgeBase}}/health" } },
+        { "name": "Edge readiness", "request": { "method": "GET", "url": "{{edgeBase}}/health/ready" } },
+        { "name": "Edge metrics", "request": { "method": "GET", "url": "{{edgeBase}}/metrics" } }
+      ]
+    },
+    {
+      "name": "Identity",
+      "item": [
+        {
+          "name": "Admin token",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "const body = pm.response.json();",
+                "const token = body.token || body.accessToken;",
+                "if (token) pm.environment.set('adminToken', token);"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Correlation-ID", "value": "{{correlationId}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userName\": \"{{adminUsername}}\",\n  \"password\": \"{{adminPassword}}\",\n  \"tokenLifetimeSeconds\": 3600\n}"
+            },
+            "url": "{{coreBase}}/api/auth/token"
+          }
+        },
+        {
+          "name": "Provision Edge credential (one-time secret)",
+          "request": {
+            "description": "Returns deviceSecret exactly once. Disable console/proxy capture and move it directly to a secret store; this request intentionally has no script that persists the response secret.",
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Idempotency-Key", "value": "{{provisionEdgeOperationId}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Correlation-ID", "value": "{{correlationId}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deviceId\": \"{{edgeId}}\",\n  \"logicalDeviceCode\": \"EDGE-12345-01\",\n  \"exchangeCenterCode\": \"{{centerCode}}\"\n}"
+            },
+            "url": "{{coreBase}}/api/admin/edges"
+          }
+        },
+        {
+          "name": "Rotate Edge credential (one-time replacement secret)",
+          "request": {
+            "description": "Use a new idempotency key for each intended rotation. The replacement deviceSecret is returned only by the first response; replay returns null and requires another rotation if the value was not captured. This request intentionally has no script that persists the response secret.",
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Idempotency-Key", "value": "{{rotateEdgeOperationId}}" },
+              { "key": "X-Correlation-ID", "value": "{{correlationId}}" }
+            ],
+            "url": "{{coreBase}}/api/admin/edges/{{edgeId}}/rotate-secret"
+          }
+        },
+        {
+          "name": "Edge token",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "const body = pm.response.json();",
+                "const token = body.token || body.accessToken;",
+                "if (token) pm.environment.set('edgeToken', token);"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Correlation-ID", "value": "{{correlationId}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"logicalDeviceCode\": \"{{edgeLogicalCode}}\",\n  \"deviceSecret\": \"{{edgeDeviceSecret}}\",\n  \"tokenLifetimeSeconds\": 900\n}"
+            },
+            "url": "{{coreBase}}/api/auth/edge-token"
+          }
+        },
+        {
+          "name": "Disable Edge",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}", "type": "text" },
+              { "key": "Idempotency-Key", "value": "{{disableEdgeOperationId}}" },
+              { "key": "X-Correlation-ID", "value": "{{correlationId}}" }
+            ],
+            "url": "{{coreBase}}/api/admin/edges/{{edgeId}}/disable"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Device configuration",
+      "item": [
+        {
+          "name": "Register device",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Idempotency-Key", "value": "{{registerDeviceOperationId}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Correlation-ID", "value": "{{correlationId}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Manual test device\",\n  \"deviceType\": \"Sorter\",\n  \"logicalCode\": \"MANUAL-01\",\n  \"owner\": \"QA\",\n  \"exchangeCenterCode\": \"{{centerCode}}\",\n  \"description\": \"Synthetic test fixture\"\n}"
+            },
+            "url": "{{coreBase}}/api/admin/devices"
+          }
+        },
+        {
+          "name": "List devices",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{coreBase}}/api/admin/devices?page=1&pageSize=20"
+          }
+        },
+        {
+          "name": "Update device",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Idempotency-Key", "value": "{{updateDeviceOperationId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Manual test device updated\",\n  \"deviceType\": \"Sorter\",\n  \"owner\": \"QA\",\n  \"description\": \"Synthetic update\"\n}"
+            },
+            "url": "{{coreBase}}/api/admin/devices/{{deviceId}}"
+          }
+        },
+        {
+          "name": "Activate device",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Idempotency-Key", "value": "{{activationOperationId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"active\": true\n}" },
+            "url": "{{coreBase}}/api/admin/devices/{{deviceId}}"
+          }
+        },
+        {
+          "name": "Rotate sorting-device secret (one-time replacement secret)",
+          "request": {
+            "description": "The replacement deviceSecret is returned only once and is intentionally not persisted by a test script. Replay returns null; use a fresh idempotency key for another intended rotation.",
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Idempotency-Key", "value": "{{rotateDeviceOperationId}}" },
+              { "key": "X-Correlation-ID", "value": "{{correlationId}}" }
+            ],
+            "url": "{{coreBase}}/api/admin/devices/{{deviceId}}/rotate-secret"
+          }
+        },
+        {
+          "name": "Publish configuration",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Idempotency-Key", "value": "{{configOperationId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"exchangeCenterCode\": \"{{centerCode}}\",\n  \"postalCodes\": [\"{{centerCode}}\"],\n  \"shortReadingThresholdSeconds\": 3600,\n  \"returnThresholdSeconds\": 86400,\n  \"weightToleranceKg\": 0.1,\n  \"dimensionToleranceCm\": 1.0,\n  \"autoDispatchEnabled\": false,\n  \"maximumOpenBagMinutes\": 60\n}"
+            },
+            "url": "{{coreBase}}/api/admin/config"
+          }
+        },
+        {
+          "name": "List configurations",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{coreBase}}/api/admin/config?exchangeCenterCode={{centerCode}}"
+          }
+        },
+        {
+          "name": "Edge bootstrap",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('bootstrap returned a snapshot', () => pm.response.to.have.status(200));",
+                "const body = pm.response.json();",
+                "pm.environment.set('configurationVersion', body.version);",
+                "pm.environment.set('configurationEtag', pm.response.headers.get('ETag'));"
+              ]
+            }
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{edgeToken}}" }],
+            "url": "{{coreBase}}/api/edge/config/bootstrap?exchangeCenterCode={{centerCode}}&currentVersion=0"
+          }
+        },
+        {
+          "name": "Conditional Edge bootstrap (unchanged)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": ["pm.test('unchanged bootstrap is empty', () => pm.response.to.have.status(304));"]
+            }
+          }],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{edgeToken}}" },
+              { "key": "If-None-Match", "value": "{{configurationEtag}}" }
+            ],
+            "url": "{{coreBase}}/api/edge/config/bootstrap?exchangeCenterCode={{centerCode}}&currentVersion={{configurationVersion}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Parcel lifecycle",
+      "item": [
+        {
+          "name": "Inbound query",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{edgeToken}}" },
+              { "key": "Idempotency-Key", "value": "{{inboundOperationId}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Correlation-ID", "value": "{{correlationId}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idempotencyKey\": \"{{inboundOperationId}}\",\n  \"barcodes\": [\"{{barcode}}\"],\n  \"parcelType\": \"parcel\",\n  \"serviceType\": \"1\",\n  \"originCenterCode\": \"{{centerCode}}\",\n  \"destinationCenterCode\": \"54321\",\n  \"deviceId\": \"{{deviceId}}\",\n  \"exchangeCenterCode\": \"{{centerCode}}\",\n  \"physicalAttributes\": {\"weightKg\": 1.25, \"lengthCm\": 30, \"widthCm\": 20, \"heightCm\": 12},\n  \"edgeEventTime\": \"2026-08-16T08:00:00Z\",\n  \"correlationId\": \"{{correlationId}}\"\n}"
+            },
+            "url": "{{coreBase}}/api/edge/parcels/inbound-query"
+          }
+        },
+        {
+          "name": "Store bag",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{edgeToken}}" },
+              { "key": "Idempotency-Key", "value": "{{bagOperationId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bagBarcode\": \"{{bagBarcode}}\",\n  \"originCenterCode\": \"{{centerCode}}\",\n  \"destinationCenterCode\": \"54321\",\n  \"createdByDeviceId\": \"{{deviceId}}\",\n  \"memberBarcodes\": [\"{{barcode}}\"],\n  \"sealNumber\": \"SEAL-MANUAL-001\",\n  \"transportType\": \"Ground\",\n  \"closedAt\": \"2026-08-16T08:05:00Z\",\n  \"correlationId\": \"{{correlationId}}\"\n}"
+            },
+            "url": "{{coreBase}}/api/edge/bags"
+          }
+        },
+        {
+          "name": "Store dispatch",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{edgeToken}}" },
+              { "key": "Idempotency-Key", "value": "{{dispatchOperationId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dispatchId\": \"{{dispatchId}}\",\n  \"destinationCenterCode\": \"54321\",\n  \"bagBarcodes\": [\"{{bagBarcode}}\"],\n  \"closedAt\": \"2026-08-16T08:10:00Z\",\n  \"correlationId\": \"{{correlationId}}\"\n}"
+            },
+            "url": "{{coreBase}}/api/edge/dispatches"
+          }
+        },
+        { "name": "Search parcels", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }], "url": "{{coreBase}}/api/admin/parcels?page=1&pageSize=20&barcode={{barcode}}" } },
+        { "name": "Get parcel", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }], "url": "{{coreBase}}/api/admin/parcels/{{barcode}}" } },
+        { "name": "Get bag", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }], "url": "{{coreBase}}/api/admin/bags/{{bagBarcode}}" } },
+        { "name": "Get dispatch", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }], "url": "{{coreBase}}/api/admin/dispatches/{{dispatchId}}" } }
+      ]
+    },
+    {
+      "name": "Data ingestion",
+      "item": [
+        {
+          "name": "Parcel event",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{edgeToken}}" },
+              { "key": "Idempotency-Key", "value": "{{parcelEventOperationId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"eventId\": \"66666666-6666-4666-8666-666666666666\",\n  \"edgeId\": \"{{edgeId}}\",\n  \"exchangeCenterCode\": \"{{centerCode}}\",\n  \"topic\": \"parcel.events.received\",\n  \"idempotencyKey\": \"{{parcelEventOperationId}}\",\n  \"correlationId\": \"{{correlationId}}\",\n  \"payload\": {\"parcelBarcode\": \"{{barcode}}\", \"finalStatus\": \"Success\"},\n  \"occurredAt\": \"2026-08-16T08:02:00Z\"\n}" },
+            "url": "{{coreBase}}/api/edge/parcel-events"
+          }
+        },
+        {
+          "name": "Pre-signed URL",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('presign succeeded', () => pm.response.to.have.status(200));",
+                "const body = pm.response.json();",
+                "pm.expect(body.objectKey).to.match(/^edge-uploads\\//);",
+                "pm.expect(body.requiredHeaders).to.be.an('object');",
+                "pm.environment.set('imageObjectKey', body.objectKey);",
+                "pm.environment.set('imageUploadUrl', body.uploadUrl);"
+              ]
+            }
+          }],
+          "request": {
+            "description": "The server derives objectKey from JWT Edge identity, center, reading and event. PUT exactly contentLength bytes with the same Content-Type and every returned requiredHeaders entry to uploadUrl before publishing metadata. Production requires x-amz-server-side-encryption: AES256.",
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{edgeToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"eventId\": \"77777777-7777-4777-8777-777777777777\",\n  \"readingRecordId\": \"{{readingId}}\",\n  \"attachmentType\": \"front\",\n  \"contentType\": \"image/jpeg\",\n  \"contentLength\": 4,\n  \"lifetimeSeconds\": 300\n}" },
+            "url": "{{coreBase}}/api/edge/images/presigned-url"
+          }
+        },
+        {
+          "name": "Image metadata",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{edgeToken}}" },
+              { "key": "Idempotency-Key", "value": "{{imageOperationId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"eventId\": \"77777777-7777-4777-8777-777777777777\",\n  \"edgeId\": \"{{edgeId}}\",\n  \"exchangeCenterCode\": \"{{centerCode}}\",\n  \"parcelBarcode\": \"{{barcode}}\",\n  \"readingRecordId\": \"{{readingId}}\",\n  \"objectKey\": \"{{imageObjectKey}}\",\n  \"contentType\": \"image/jpeg\",\n  \"attachmentType\": \"front\",\n  \"idempotencyKey\": \"{{imageOperationId}}\",\n  \"correlationId\": \"{{correlationId}}\",\n  \"receivedAt\": \"2026-08-16T08:03:00Z\"\n}" },
+            "url": "{{coreBase}}/api/edge/images/metadata"
+          }
+        },
+        {
+          "name": "Error event",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{edgeToken}}" },
+              { "key": "Idempotency-Key", "value": "{{errorOperationId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"eventId\": \"88888888-8888-4888-8888-888888888888\",\n  \"edgeId\": \"{{edgeId}}\",\n  \"exchangeCenterCode\": \"{{centerCode}}\",\n  \"topic\": \"edge.integration-error.v1\",\n  \"idempotencyKey\": \"{{errorOperationId}}\",\n  \"correlationId\": \"{{correlationId}}\",\n  \"payload\": {\"code\": \"sandbox.timeout\", \"message\": \"Synthetic timeout\"},\n  \"occurredAt\": \"2026-08-16T08:04:00Z\"\n}" },
+            "url": "{{coreBase}}/api/edge/errors"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Storage, health and operations",
+      "item": [
+        {
+          "name": "Register Edge",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{edgeToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"edgeId\": \"{{edgeId}}\",\n  \"exchangeCenterCode\": \"{{centerCode}}\",\n  \"softwareVersion\": \"manual-test\",\n  \"configurationVersion\": 1,\n  \"registeredAt\": \"2026-08-16T08:00:00Z\"\n}" },
+            "url": "{{coreBase}}/api/edge/registration"
+          }
+        },
+        {
+          "name": "Heartbeat",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{edgeToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"edgeId\": \"{{edgeId}}\",\n  \"heartbeatAt\": \"2026-08-16T08:01:00Z\",\n  \"softwareVersion\": \"manual-test\",\n  \"configurationVersion\": 1,\n  \"availableDiskBytes\": 10737418240,\n  \"pendingCount\": 0,\n  \"failedCount\": 0,\n  \"deadLetterCount\": 0,\n  \"lastSuccessfulSync\": \"2026-08-16T08:00:30Z\"\n}" },
+            "url": "{{coreBase}}/api/edge/heartbeat"
+          }
+        },
+        {
+          "name": "Operational event",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{edgeToken}}" },
+              { "key": "Idempotency-Key", "value": "{{edgeEventOperationId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"eventType\": \"Authenticated\",\n  \"edgeId\": \"{{edgeId}}\",\n  \"deviceId\": \"{{deviceId}}\",\n  \"correlationId\": \"{{correlationId}}\",\n  \"occurredAt\": \"2026-08-16T08:01:00Z\"\n}" },
+            "url": "{{coreBase}}/api/edge/events"
+          }
+        },
+        { "name": "Admin Edge health", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }], "url": "{{coreBase}}/api/admin/edges/health" } },
+        {
+          "name": "Operational result",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{edgeToken}}" },
+              { "key": "Idempotency-Key", "value": "{{resultOperationId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"edgeId\": \"{{edgeId}}\",\n  \"exchangeCenterCode\": \"{{centerCode}}\",\n  \"idempotencyKey\": \"{{resultOperationId}}\",\n  \"correlationId\": \"{{correlationId}}\",\n  \"parcelBarcode\": \"{{barcode}}\",\n  \"callResult\": \"Accepted\",\n  \"success\": true,\n  \"calledAt\": \"2026-08-16T08:00:00Z\",\n  \"respondedAt\": \"2026-08-16T08:00:01Z\",\n  \"attempts\": 1,\n  \"finalStatus\": \"Succeeded\"\n}" },
+            "url": "{{coreBase}}/api/edge/operational-results"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Edge local admin",
+      "item": [
+        {
+          "name": "Update device IP binding",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Correlation-ID", "value": "{{correlationId}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"ipAddresses\": [\"127.0.0.1\"]\n}" },
+            "url": "{{edgeBase}}/admin/devices/manual-device/ip"
+          }
+        },
+        {
+          "name": "Edge safe operational status",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "X-Correlation-ID", "value": "{{correlationId}}" }
+            ],
+            "url": "{{edgeBase}}/api/edge/status"
+          }
+        }
+      ]
+    }
+  ]
+}

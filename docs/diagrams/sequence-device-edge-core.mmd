@@ -1,0 +1,44 @@
+sequenceDiagram
+    autonumber
+    participant D as Sorting Device
+    participant H as Edge SignalR Host
+    participant A as Edge Application
+    participant DB as SQLite Journal/Outbox
+    participant P as Postal Systems
+    participant C as Core Gateway/APIs
+
+    D->>H: Auth envelope
+    H->>A: Authenticate device and bind connection
+    A->>DB: Read configuration / write session
+    DB-->>A: Device verifier and session state
+    A-->>H: Auth status 0 or 2
+    H-->>D: SessionId and edgeServerTime
+
+    D->>H: RegisterInbound with operationId
+    H->>A: Validated application request
+    A->>DB: Check operation journal
+    alt Replay
+        DB-->>A: Stored response
+    else New operation
+        A->>DB: Commit external-operation intent
+        DB-->>A: Intent durable before side effect
+        A->>P: Lookup/register with timeout
+        alt Definitive upstream response
+            P-->>A: Success, explicit pending or terminal receipt
+            A->>DB: Persist receipt immediately
+            A->>DB: Finalize state + journal + outbox
+            DB-->>A: Commit acknowledged
+        else Timeout / commit unknown
+            A->>DB: Preserve intent as manual reconciliation
+            A-->>H: Safe Error (no blind external retry)
+        end
+    end
+    A-->>H: Domain result
+    H-->>D: Device V1 response
+
+    loop Background delivery
+        A->>DB: Claim due outbox row
+        A->>C: Versioned event with idempotency key
+        C-->>A: Durable acknowledgment
+        A->>DB: Mark published
+    end

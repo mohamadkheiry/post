@@ -1,0 +1,88 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: '**/packages.lock.json'
+
+      - name: Restore
+        run: dotnet restore Post.sln --locked-mode
+
+      - name: Audit NuGet dependencies
+        shell: pwsh
+        run: ./scripts/verify-dotnet-packages.ps1
+
+      - name: Format verification
+        run: dotnet format Post.sln --no-restore --verify-no-changes --severity warn
+
+      - name: Build
+        run: dotnet build Post.sln --configuration Release --no-restore
+
+      - name: Test and collect coverage
+        shell: pwsh
+        run: ./scripts/run-tests.ps1 -Configuration Release -NoRestore -OutputRoot artifacts/test-results
+
+      - name: Validate migration model and generate SQL
+        shell: pwsh
+        run: ./scripts/verify-migrations.ps1 -Configuration Release -NoBuild -OutputRoot artifacts/migration-checks
+
+      - name: Validate architecture diagrams
+        shell: pwsh
+        run: ./scripts/verify-diagrams.ps1
+
+      - name: Validate documentation links
+        shell: pwsh
+        run: ./scripts/verify-doc-links.ps1
+
+      - name: Validate API samples
+        shell: pwsh
+        run: ./scripts/verify-api-samples.ps1
+
+      - name: Lint Markdown
+        run: npx --yes markdownlint-cli2@0.23.2 --config docs/.markdownlint.jsonc AGENTS.md README.md SECURITY.md deploy.md "docs/**/*.md" "infra/**/*.md"
+
+      - name: Secret hygiene check
+        shell: pwsh
+        run: ./scripts/verify-no-secrets.ps1
+
+      - name: Validate Compose models
+        run: |
+          docker compose -p post-platform-final -f compose.yaml config --quiet
+          docker compose -p post-platform-final -f compose.yaml -f compose.full.yaml config --quiet
+          docker compose -p post-platform-final -f compose.yaml -f compose.full.yaml \
+            --profile connected-edge --profile observability --profile tools --profile ha \
+            config --quiet
+
+      - name: Verify immutable container image locks
+        shell: pwsh
+        run: ./scripts/infra/verify-image-locks.ps1
+
+      - name: Upload test evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: test-evidence
+          path: |
+            artifacts/test-results
+            artifacts/migration-checks
+          if-no-files-found: warn

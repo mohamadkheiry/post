@@ -1,0 +1,11 @@
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.pdf binary
+*.zip binary
+
+docs/diagrams/*.svg text eol=lf linguist-generated=true
+src/**/Migrations/*.Designer.cs text eol=lf linguist-generated=true

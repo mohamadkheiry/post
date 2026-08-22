@@ -237,10 +237,12 @@ namespace Post.Core.Infrastructure.Persistence.Migrations.Identity
                        0, 0, NULL, 1, 0
                 FROM [AppUsers];
 
+                SET IDENTITY_INSERT [IdentityBootstrapLocks] ON;
                 INSERT INTO [IdentityBootstrapLocks] ([Id], [UserId], [CompletedAt])
                 SELECT TOP (1) 1, [Id], SYSUTCDATETIME()
                 FROM [AppUsers]
                 ORDER BY [Id];
+                SET IDENTITY_INSERT [IdentityBootstrapLocks] OFF;
 
                 INSERT INTO [AspNetUserRoles] ([UserId], [RoleId])
                 SELECT [UserId], CASE [Role]

@@ -114,9 +114,10 @@ try {
 
         $stdout = Join-Path $logPath ($service.Name + '.stdout.log')
         $stderr = Join-Path $logPath ($service.Name + '.stderr.log')
+        $quotedDllArgument = '"' + $dllPath + '"'
         $process = Start-Process `
             -FilePath $dotnetCommand `
-            -ArgumentList @($dllPath) `
+            -ArgumentList @($quotedDllArgument) `
             -WorkingDirectory $workingDirectory `
             -WindowStyle Hidden `
             -RedirectStandardOutput $stdout `

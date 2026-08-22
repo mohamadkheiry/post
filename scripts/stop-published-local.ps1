@@ -23,9 +23,15 @@ foreach ($entry in $entries) {
     $process = Get-Process -Id ([int]$entry.Pid) -ErrorAction SilentlyContinue
     if ($null -eq $process) { continue }
 
-    $expectedStart = [DateTimeOffset]::Parse(
-        [string]$entry.StartedAtUtc,
-        [Globalization.CultureInfo]::InvariantCulture)
+    $expectedStart = if ($entry.StartedAtUtc -is [DateTime]) {
+        [DateTimeOffset]::new(([DateTime]$entry.StartedAtUtc).ToUniversalTime())
+    }
+    else {
+        [DateTimeOffset]::Parse(
+            [string]$entry.StartedAtUtc,
+            [Globalization.CultureInfo]::InvariantCulture,
+            [Globalization.DateTimeStyles]::RoundtripKind)
+    }
     $actualStart = $process.StartTime.ToUniversalTime()
     if ([math]::Abs(($actualStart - $expectedStart.UtcDateTime).TotalSeconds) -gt 1) {
         throw "PID $($entry.Pid) was reused; refusing to stop an unrelated process."

@@ -100,7 +100,7 @@ if (-not [string]::IsNullOrWhiteSpace($EnvSecretDirectory)) {
 
 function Test-OperationalValuePresent {
     param(
-        [Parameter(Mandatory)][string]$Content,
+        [Parameter(Mandatory)][AllowEmptyString()][string]$Content,
         [Parameter(Mandatory)][string]$Key,
         [Parameter(Mandatory)][string]$Value
     )

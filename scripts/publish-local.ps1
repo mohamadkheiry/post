@@ -25,8 +25,8 @@ $hosts = @(
 New-Item -ItemType Directory -Force -Path $outputPath | Out-Null
 & $dotnetCommand restore (Join-Path $repositoryRoot 'Post.sln') --locked-mode
 if ($LASTEXITCODE -ne 0) { throw 'Locked NuGet restore failed before publish.' }
-foreach ($host in $hosts) {
-    $projectPath = Join-Path $repositoryRoot $host
+foreach ($deployable in $hosts) {
+    $projectPath = Join-Path $repositoryRoot $deployable
     $projectName = [IO.Path]::GetFileNameWithoutExtension($projectPath)
     $projectOutput = Join-Path $outputPath $projectName
     & $dotnetCommand publish $projectPath --configuration $Configuration --output $projectOutput --nologo --no-restore

@@ -327,7 +327,7 @@ function Wait-KafkaPayload {
     do {
         $payload = Invoke-Compose -Capture -Arguments @(
             'exec', '-T', '-e', "POST_KAFKA_TOPIC=$Topic", 'redpanda', '/bin/bash', '-ec',
-            'timeout 3 rpk topic consume "$POST_KAFKA_TOPIC" --brokers=localhost:9092 --offset=start --num=100 --format=%v 2>/dev/null || true')
+            'timeout 3 rpk topic consume "$POST_KAFKA_TOPIC" --brokers=localhost:9092 --offset=-1000 --num=1000 --format=%v 2>/dev/null || true')
         if ($payload.Contains($Marker, [StringComparison]::Ordinal)) {
             return $payload
         }

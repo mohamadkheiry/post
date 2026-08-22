@@ -779,7 +779,7 @@ try {
     if ($operationalRebuilt.Trim() -ne '1') { throw 'OperationalResult outage recovery did not rebuild its Redis mirror.' }
 
     Invoke-Compose -Arguments @('up', '-d', '--scale', 'parcel-lifecycle=2', '--no-recreate', '--wait', '--wait-timeout', '180', 'parcel-lifecycle')
-    $replicaIds = @(Invoke-Compose -Capture -Arguments @('ps', '-q', 'parcel-lifecycle') -split "`r?`n" | Where-Object { $_ })
+    $replicaIds = @((Invoke-Compose -Capture -Arguments @('ps', '-q', 'parcel-lifecycle')) -split "`r?`n" | Where-Object { $_ })
     if ($replicaIds.Count -ne 2) { throw 'Exactly two ParcelLifecycle replicas were not running.' }
     foreach ($replicaId in $replicaIds) {
         $ip = (& docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $replicaId).Trim()

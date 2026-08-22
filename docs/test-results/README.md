@@ -24,6 +24,9 @@
 این نتیجه متعلق به اجرای کامل solution و full-development E2E روی commit بالا است؛
 آمار زیرمجموعه یا commit متفاوت جایگزین آن نیست.
 
+شاهد مستقل publish و اجرای محلی Mock/LocalConnected روی نسخهٔ نهایی runner در
+[`20260822-local-publish-8aa357f.md`](20260822-local-publish-8aa357f.md) ثبت شده است.
+
 ## تولید گزارش
 
 ```powershell

@@ -104,6 +104,23 @@ try {
             $processEnvironment.Edge__Storage__BackupDirectory = (Join-Path $runtimePath 'edge-backups')
             $processEnvironment.Edge__Security__AllowUnboundDevices = 'true'
             $processEnvironment.Edge__LocalAdmin__AuthenticationEnabled = 'false'
+            # Tester launchers may supply a synthetic Mock fixture or an explicitly
+            # entered LocalConnected OAuth credential.  Forward only this small
+            # allow-list; never copy the caller's entire environment into a host.
+            foreach ($variableName in @(
+                'Edge__Mock__CenterCode',
+                'Edge__Mock__ConfigurationVersion',
+                'Edge__Mock__Devices__0__DeviceId',
+                'Edge__Mock__Devices__0__LogicalId',
+                'Edge__Mock__Devices__0__Token',
+                'Edge__Mock__Devices__0__IsActive',
+                'Edge__DestinationApi__Username',
+                'Edge__DestinationApi__Password')) {
+                $value = [Environment]::GetEnvironmentVariable($variableName)
+                if (-not [string]::IsNullOrWhiteSpace($value)) {
+                    $processEnvironment[$variableName] = $value
+                }
+            }
             if ($EncryptEdgeStorage) {
                 $processEnvironment.POST_EDGE_SQLITE_KEY = $edgeStorageKey
                 if (-not [string]::IsNullOrEmpty($edgePreviousStorageKey)) {

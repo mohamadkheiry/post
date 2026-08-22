@@ -309,3 +309,4 @@ gate نهایی علاوه بر صفر بودن failure و skip، حداقل پ�
 - [Operations runbook](docs/operations/runbook.md)
 - [Requirements traceability](docs/requirements/traceability.md)
 - [Test-result publication](docs/test-results/README.md)
+- [Tester handoff package](docs/TESTER-HANDOFF.md)

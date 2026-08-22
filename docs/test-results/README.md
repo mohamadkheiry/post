@@ -35,7 +35,7 @@ Placeholderها عمداً تا اجرای نهایی کل solution حفظ شد�
 - `checksums.sha256` برای تشخیص تغییر artefact.
 
 پس از یک اجرای سبز روی working tree تمیز، نسخهٔ curated و قابل commit را بدون
-TRX/Cobertura و pathهای محیطی منتشر کنید:
+TRX/Cobertura، pathهای محیطی و آرگومان‌های تست‌های پارامتری منتشر کنید:
 
 ```powershell
 $runtimeEvidence = Get-ChildItem .\artifacts\full-dev\full-dev-*.json |
@@ -49,7 +49,8 @@ $runtimeEvidence = Get-ChildItem .\artifacts\full-dev\full-dev-*.json |
 این command فقط وقتی می‌پذیرد که commit اجرای تست با `HEAD` یکسان، working tree
 در زمان اجرا تمیز، failed/skipped صفر و تعداد متدهای دست‌نویس کاملاً بدون پوشش
 صفر باشد. خروجی versioned زیر `docs/test-results/<date>-<commit>/` شامل summary،
-environment، inventory نام تست‌ها، نتیجهٔ redacted اجرای واقعی full-development
+environment، inventory نام تست‌ها با Theory argumentهای redacted، نتیجهٔ اجرای
+واقعی full-development به‌صورت redacted
 و checksum همهٔ این فایل‌هاست و نتیجهٔ موجود را overwrite نمی‌کند. runtime فقط
 اگر PASS، متعلق به همان commit تمیز، شامل connected-edge/observability/HA و دارای
 baseline حداقل دو مرسوله/ثانیه با خطای صفر باشد پذیرفته می‌شود.
@@ -59,7 +60,8 @@ baseline حداقل دو مرسوله/ثانیه با خطای صفر باشد �
 1. مطمئن شوید working tree و commit مورد گزارش مشخص است.
 2. test script را روی Release و بدون test filter اجرا کنید.
 3. failure و skip غیرمنتظره را رفع کنید؛ فقط خروجی سبز قابل انتشار است.
-4. `summary.md` و `environment.json` را از نظر نبود path/secret/private input بررسی کنید.
+4. `summary.md` و `environment.json` را از نظر نبود path/secret/private input بررسی کنید؛
+   publisher آرگومان‌های Theory را با `<arguments-redacted>` جایگزین می‌کند.
 5. جدول بالا را با همان run به‌روزرسانی کنید.
 6. `publish-test-evidence.ps1` را اجرا و directory ساخته‌شده را بازبینی کنید؛
    TRX/Cobertura خام commit نمی‌شوند.

@@ -58,6 +58,21 @@ if ($currentWorkingTreeStatus.Count -gt 0) {
     throw 'Published evidence requires the current working tree to remain clean.'
 }
 
+$inventoryRows = @(Import-Csv -LiteralPath $inventoryPath)
+$curatedInventory = @($inventoryRows | ForEach-Object {
+    [pscustomobject]@{
+        Project = [string]$_.Project
+        Test = [regex]::Replace(
+            [string]$_.Test,
+            '\s*\(.*\)$',
+            '(<arguments-redacted>)',
+            [Text.RegularExpressions.RegexOptions]::CultureInvariant)
+        Outcome = [string]$_.Outcome
+        Duration = [string]$_.Duration
+    }
+})
+$curatedInventoryContent = ($curatedInventory | ConvertTo-Csv -NoTypeInformation) -join "`n"
+
 $generatedAt = [DateTimeOffset]::Parse(
     [string]$environment.generatedAtUtc,
     [Globalization.CultureInfo]::InvariantCulture)
@@ -86,12 +101,17 @@ $forbiddenPatterns = @(
     '(?i)[A-Z]:\\Users\\',
     '(?i)/home/[^/]+/'
 )
-foreach ($sourceFile in @($summaryPath, $environmentPath, $inventoryPath)) {
+foreach ($sourceFile in @($summaryPath, $environmentPath)) {
     $content = Get-Content -LiteralPath $sourceFile -Raw
     foreach ($pattern in $forbiddenPatterns) {
         if ($content -match $pattern) {
             throw "Test evidence contains forbidden environment/secret-like data in $([IO.Path]::GetFileName($sourceFile))."
         }
+    }
+}
+foreach ($pattern in $forbiddenPatterns) {
+    if ($curatedInventoryContent -match $pattern) {
+        throw 'Curated test inventory contains forbidden environment/secret-like data.'
     }
 }
 
@@ -176,7 +196,8 @@ if (-not [string]::IsNullOrWhiteSpace($RuntimeEvidencePath)) {
 [IO.Directory]::CreateDirectory($outputPath) | Out-Null
 Copy-Item -LiteralPath $summaryPath -Destination (Join-Path $outputPath 'summary.md')
 Copy-Item -LiteralPath $environmentPath -Destination (Join-Path $outputPath 'environment.json')
-Copy-Item -LiteralPath $inventoryPath -Destination (Join-Path $outputPath 'test-inventory.csv')
+$curatedInventory |
+    Export-Csv -LiteralPath (Join-Path $outputPath 'test-inventory.csv') -NoTypeInformation -Encoding utf8
 if ($null -ne $resolvedRuntimeEvidencePath) {
     Copy-Item -LiteralPath $resolvedRuntimeEvidencePath -Destination (Join-Path $outputPath 'runtime-e2e.json')
 }
